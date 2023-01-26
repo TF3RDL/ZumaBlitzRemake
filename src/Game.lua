@@ -6,8 +6,6 @@ local Game = class:derive("Game")
 
 
 
-local strmethods = require("src/strmethods")
-
 local Vec2 = require("src/Essentials/Vector2")
 
 local Timer = require("src/Timer")
@@ -54,6 +52,7 @@ function Game:init()
 
 	-- Step 1. Load the config
 	self.configManager = ConfigManager()
+	self.configManager:loadStuffBeforeResources()
 
 	-- Step 2. Initialize the window
 	local res = self.configManager.config.nativeResolution
@@ -80,10 +79,11 @@ function Game:init()
 
 	-- Step 8. Set up the UI Manager
 	self.uiManager = UIManager()
-	self.uiManager:initSplash()
+	--self.uiManager:initSplash()
 
 	-- Step 9. Set upt the experimental UI2 Manager
-	--self.ui2Manager = UI2Manager()
+	self.ui2Manager = UI2Manager()
+	self.ui2Manager:initSplash()
 end
 
 
@@ -100,7 +100,8 @@ function Game:initSession()
 	-- Load whatever needs loading the new way from config.
 	self.configManager:loadStuffAfterResources()
 	-- Setup the UI and particles
-	self.uiManager:init()
+	--self.uiManager:init()
+	self.ui2Manager:init()
 	self.particleManager = ParticleManager()
 
 	self.session = Session()
@@ -129,7 +130,8 @@ function Game:tick(dt) -- always with 1/60 seconds
 		self.session:update(dt)
 	end
 
-	self.uiManager:update(dt)
+	--self.uiManager:update(dt)
+	self.ui2Manager:update(dt)
 
 	if self.particleManager then
 		self.particleManager:update(dt)
@@ -244,8 +246,8 @@ function Game:draw()
 	if self.particleManager then
 		self.particleManager:draw()
 	end
-	self.uiManager:draw()
-	--self.ui2Manager:draw()
+	--self.uiManager:draw()
+	self.ui2Manager:draw()
 	_Debug:profDraw2Checkpoint()
 
 	-- Borders
@@ -267,7 +269,8 @@ end
 ---@param y integer The Y coordinate of mouse position.
 ---@param button integer The mouse button which was pressed.
 function Game:mousepressed(x, y, button)
-	self.uiManager:mousepressed(x, y, button)
+	--self.uiManager:mousepressed(x, y, button)
+	self.ui2Manager:mousepressed(x, y, button)
 
 	if self:levelExists() and _MousePos.y < 560 then
 		if button == 1 then
@@ -285,7 +288,8 @@ end
 ---@param y integer The Y coordinate of mouse position.
 ---@param button integer The mouse button which was released.
 function Game:mousereleased(x, y, button)
-	self.uiManager:mousereleased(x, y, button)
+	--self.uiManager:mousereleased(x, y, button)
+	self.ui2Manager:mousereleased(x, y, button)
 end
 
 
@@ -293,7 +297,8 @@ end
 ---Callback from `main.lua`.
 ---@param key string The pressed key code.
 function Game:keypressed(key)
-	self.uiManager:keypressed(key)
+	--self.uiManager:keypressed(key)
+	self.ui2Manager:keypressed(key)
 	-- shooter
 	if self:levelExists() then
 		local shooter = self.session.level.shooter
@@ -322,7 +327,8 @@ end
 ---Callback from `main.lua`.
 ---@param t string Something which makes text going.
 function Game:textinput(t)
-	self.uiManager:textinput(t)
+	--self.uiManager:textinput(t)
+	self.ui2Manager:textinput(t)
 end
 
 
@@ -390,7 +396,7 @@ end
 
 
 ---Exits the game.
----@param forced boolean If `true`, the engine will exit completely even if the "Return to Boot Screen" option is enabled.
+---@param forced boolean? If `true`, the engine will exit completely even if the "Return to Boot Screen" option is enabled.
 function Game:quit(forced)
 	self:save()
 	self.resourceManager:unload()
