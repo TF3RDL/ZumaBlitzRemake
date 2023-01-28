@@ -21,9 +21,19 @@ local Game = require("src/Game")
 local ExpressionVariables = require("src/ExpressionVariables")
 local Settings = require("src/Kernel/Settings")
 
+local http = require("com/socket/http")
+local ltn12 = require("ltn12")
 local DiscordRichPresence = require("src/DiscordRichPresence")
 
-
+local body = {}
+local r, c, h, s = http.request {
+	-- make sure you have the nodejs server up, or this won't work
+    url = "http://localhost:21723/",
+	sink = ltn12.sink.table(body)
+}
+for _, v in pairs(body) do
+	print(v)
+end
 
 -- CONSTANT ZONE
 _VERSION = "vZB"
