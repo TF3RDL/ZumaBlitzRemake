@@ -25,6 +25,7 @@ local http = require("socket.http")
 local ltn12 = require("ltn12")
 local DiscordRichPresence = require("src/DiscordRichPresence")
 
+--[[
 local body = {}
 local r, c, h, s = http.request {
 	-- make sure you have the nodejs server up, or this won't work
@@ -33,7 +34,7 @@ local r, c, h, s = http.request {
 }
 for _, v in pairs(body) do
 	print(v)
-end
+end]]
 
 -- CONSTANT ZONE
 _VERSION = "vZB"
@@ -283,6 +284,14 @@ end
 function _LoadImage(path)
 	local imageData = _LoadImageData(path)
 	assert(imageData, string.format("LOAD IMAGE FAIL: %s", path))
+	local image = love.graphics.newImage(imageData)
+	return image
+end
+
+function _LoadImageURL(url)
+	local imageFile = http.request(url)
+	local imageData = love.image.newImageData(imageFile)
+	assert(imageData, string.format("LOAD IMAGE FAIL: %s", url))
 	local image = love.graphics.newImage(imageData)
 	return image
 end
