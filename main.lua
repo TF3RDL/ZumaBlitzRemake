@@ -21,7 +21,7 @@ local Game = require("src/Game")
 local ExpressionVariables = require("src/ExpressionVariables")
 local Settings = require("src/Kernel/Settings")
 
-local http = require("com/socket/http")
+local http = require("socket.http")
 local ltn12 = require("ltn12")
 local DiscordRichPresence = require("src/DiscordRichPresence")
 
