@@ -18,6 +18,8 @@ function ShooterConfig:new(data, path)
     self.movement = ShooterMovementConfig(data.movement, path)
 
     self.sprite = _Game.resourceManager:getSprite(data.sprite)
+    ---@type Sprite?
+    self.hotFrogTransitionSprite = (data.hotFrogTransitionSprite and _Game.resourceManager:getSprite(data.hotFrogTransitionSprite)) or nil
     ---@type Vector2
     self.spriteOffset = _ParseVec2(data.spriteOffset) or Vec2()
     ---@type Vector2
@@ -27,6 +29,8 @@ function ShooterConfig:new(data, path)
     self.shadowSpriteOffset = _ParseVec2(data.shadowSpriteOffset) or Vec2(8, 8)
     ---@type Vector2
     self.shadowSpriteAnchor = _ParseVec2(data.shadowSpriteAnchor) or Vec2(0.5, 0)
+    ---@type Vector2
+    self.ballPos = _ParseVec2(data.ballPos) or Vec2(0, 5)
     self.nextBallSprites = {}
     for n, nextBallData in pairs(data.nextBallSprites) do
         local nextBall = {

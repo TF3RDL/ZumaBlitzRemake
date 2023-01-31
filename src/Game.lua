@@ -163,11 +163,11 @@ function Game:updateRichPresence()
 			largeImageText = largeImageText .. " (Paused)"
         end
 		smallImageKey = "frogatar_temporary"
-		smallImageText = "Basic Frog"
 
         local profile = _Game:getCurrentProfile()
         local powerString = ""
-		local foodString = ""
+        local foodString = ""
+		local frogatarString = ""
 
         if #profile.equippedPowers ~= 0 then
             local powerNames = {}
@@ -182,6 +182,23 @@ function Game:updateRichPresence()
 			foodString = profile:getEquippedFoodItem(profile.equippedFood).displayName
         else
 			foodString = "None"
+        end
+		
+        local monumentStrings = {
+			spirit_beetle = "Beetle",
+			spirit_weasel = "Weasel",
+			spirit_eagle = "Eagle",
+			spirit_cat = "Cat",
+			spirit_turtle = "Turtle"
+        }
+        local frogatarStrings = {
+			frogatar_basic = "Basic"
+        }
+		
+		if profile.monument then
+			smallImageText = "Spirit "..monumentStrings[profile:getActiveMonument()]
+        else
+			smallImageText = frogatarStrings[profile:getFrogatar()].." Frog"
 		end
 
         line1 = string.format(

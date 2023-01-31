@@ -54,6 +54,7 @@ function Shooter:changeTo(name)
     self.movement = self.levelMovement or self.config.movement
 
     self.sprite = self.config.sprite
+    self.hotFrogTransitionSprite = self.config.hotFrogTransitionSprite
     self.shadowSprite = self.config.shadowSprite
     self.speedShotSprite = self.config.speedShotBeam.sprite
 
@@ -373,6 +374,14 @@ function Shooter:draw()
     end
     sprite:draw(self.pos + self.config.nextBallOffset:rotate(self.angle), self.config.nextBallAnchor, nil, self:getNextSphereFrame(), self.angle)
 
+    -- FORK-SPECIFIC CODE:
+    -- hot frog transition
+    ---@type Sprite?
+    local hotfrogtr = self.config.hotFrogTransitionSprite or nil
+    if hotfrogtr then
+        hotfrogtr:draw(self.pos + self.config.spriteOffset:rotate(self.angle), self.config.spriteAnchor, nil, nil, self.angle, nil, _Game.session.level.blitzMeter)
+    end
+
     --local p4 = posOnScreen(self.pos)
     --love.graphics.rectangle("line", p4.x - 80, p4.y - 15, 160, 30)
 end
@@ -537,8 +546,7 @@ end
 ---Returns the center position of the primary sphere.
 ---@return Vector2
 function Shooter:getSpherePos()
-    -- FORK-SPECIFIC CODE: Sphere position roughly fit to Kroakatoa Frog's mouth
-    return self.pos - Vec2(0, 30):rotate(self.angle)
+    return self.pos + self.config.ballPos:rotate(self.angle)
 end
 
 

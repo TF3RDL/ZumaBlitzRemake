@@ -19,7 +19,15 @@ local FloatingText = require("src/FloatingText")
 ---@param data table The level data, specified in a level config file.
 function Level:new(data)
     self.map = Map(self, "maps/" .. data.map, data.pathsBehavior)
-	self.shooter = Shooter(data.shooter or self.map.shooter)
+    self.shooter = Shooter(data.shooter or self.map.shooter)
+
+    -- FORK-SPECIFIC CHANGE: Change to frogatar, then spirit animal if any
+	-- Yes this is the order and there should be an animation soon
+    self.shooter:changeTo(_Game:getCurrentProfile():getFrogatar())
+	if _Game:getCurrentProfile():getActiveMonument() then
+		---@diagnostic disable-next-line: param-type-mismatch
+		self.shooter:changeTo(_Game:getCurrentProfile():getActiveMonument())
+	end
 
 	self.matchEffect = data.matchEffect
 
@@ -90,6 +98,14 @@ function Level:update(dt)
 
 	if not self.pause then
 		self:updateLogic(dt * self.gameSpeed)
+    end
+	-- Rolling sound
+	if self.rollingSound then
+		if self.pause then
+            self.rollingSound:pause()
+        elseif (not self.pause) and self.controlDelay then
+			self.rollingSound:play()
+		end
 	end
 
 	self:updateMusic()
@@ -103,7 +119,7 @@ function Level:updateLogic(dt)
 	self.map:update(dt)
     self.shooter:update(dt)
     self.stateCount = self.stateCount + dt
-	self.targetHitScore = self.targetHitBases[math.min(self.targets+1, 6)]
+	self.targetHitScore = self.targetHitBases[math.min(self.targets+1, 6)] + (_MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "targetValueModifier") or 0)
 
 	-- Danger sound
 	local d1 = self:getDanger() and not self.lost
@@ -208,10 +224,17 @@ function Level:updateLogic(dt)
 		if self.blitzMeter == 1 then
 			-- We're in hot frog mode, reset once the shooter has a ball other than the fireball.
 			if self.shooter.color > 0 then
+				self.shotLastHotFrogBall = true
 				self.blitzMeter = 0
-				self.blitzMeterCooldown = 0
+                self.blitzMeterCooldown = 0
+
+				local skin = _Game:getCurrentProfile():getActiveMonument() or _Game:getCurrentProfile():getFrogatar()
+				if _Game.configManager:getShooter(skin) then
+					self.shooter:changeTo(skin)
+				end
 			end
-		else
+        else
+			self.shotLastHotFrogBall = false
 			if self.blitzMeterCooldown == 0 then
 				self.blitzMeter = math.max(self.blitzMeter - 0.03 * dt, 0)
 			else
@@ -225,6 +248,23 @@ function Level:updateLogic(dt)
     -- Zuma style powerups
     if self.started and not self.finish and not self:areAllObjectivesReached() and not self:getEmpty() then
         local powerups = { "time", "multiplier" }
+
+		local multiplierCap = 9
+		local raiseCap = _MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "multiplierCapAdditiveModifier")
+		if raiseCap then
+			multiplierCap = multiplierCap + raiseCap
+        end
+		-- Don't spawn multipliers if we've hit the cap
+		if self.multiplier >= multiplierCap-1 then
+			local pCount = 1
+			for _,v in pairs(powerups) do
+				if v == "multiplier" then
+					table.remove(powerups, pCount)
+                end
+				pCount = pCount + 1
+			end
+		end
+
         local powerupToAdd = powerups[math.random(1, #powerups)]
         local frequencies = {
             all = self.powerupFrequency
@@ -237,18 +277,29 @@ function Level:updateLogic(dt)
 				if frequencies[powerup] > 0 and (math.random() < 1 / frequencies[powerup]) and frequencies[powerup] < self.stateCount - self.lastPowerupDeltas[powerup] then
 					local sphere = _Game.session:getRandomSphere()
                     if sphere then
-                        local cap = 10 --9
-						local raiseCap = _MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "multiplierCapAdditiveModifier")
-						if raiseCap then
-    					    cap = cap + raiseCap
-                        end
-						if powerupToAdd == "multiplier" and self.multiplier < cap then
-							sphere:addPowerup("multiplier")
+                        if powerupToAdd == "multiplier" then
+                            sphere:addPowerup("multiplier")
 						elseif powerupToAdd ~= "multiplier" then
 							sphere:addPowerup(powerupToAdd)
 						end
 					end
 					self.lastPowerupDeltas[powerup] = self.stateCount
+				end
+			end
+        end
+		-- Traverse through all the spheres one more time and remove any multiplier powerups if
+        -- we've reached the cap
+		-- TODO: Is there a better way to traverse every sphere? Might need to add a new function
+		if self.multiplier >= multiplierCap-1 then
+			for _, path in pairs(self.map.paths) do
+				for _, sphereChain in pairs(path.sphereChains) do
+					for _, sphereGroup in pairs(sphereChain.sphereGroups) do
+						for i, sphere in pairs(sphereGroup.spheres) do
+							if not sphere:isGhost() and sphere.powerup == "multiplier" then
+								sphere:removePowerup()
+							end
+						end
+					end
 				end
 			end
 		end
@@ -823,16 +874,24 @@ end
 
 ---Increments the level's Blitz Meter by a given amount and launches the Hot Frog if reaches 1.
 ---@param amount any
-function Level:incrementBlitzMeter(amount)
-	if self.blitzMeter == 1 then
+---@param chain? boolean used for spirit turtle
+function Level:incrementBlitzMeter(amount, chain)
+	if not chain and self.blitzMeter == 1 then
 		return
-	end
+    end
+	
 	self.blitzMeter = math.min(self.blitzMeter + amount, 1)
-	if self.blitzMeter == 1 then
+    if (not chain and self.blitzMeter == 1) or (chain and self.blitzMeter >= 1) then
         -- hot frog
 		local infernoFrog = _Game:getCurrentProfile():getEquippedPower("inferno_frog")
 		local additiveAmount = (infernoFrog and infernoFrog:getCurrentLevelData().additiveAmount) or 0
-		self.shooter:getMultiSphere(-2, (3 + additiveAmount))
+        self.shooter:getMultiSphere(-2, (3 + additiveAmount))
+		_Game:playSound("sound_events/hot_frog_activate.json")
+
+		local hotFrogSkin = (_Game:getCurrentProfile():getActiveMonument() and _Game:getCurrentProfile():getActiveMonument().."_hot") or _Game:getCurrentProfile():getFrogatar().."_hot"
+		if _Game.configManager:getShooter(hotFrogSkin) then
+			self.shooter:changeTo(hotFrogSkin)
+		end
 	end
 end
 
@@ -953,6 +1012,9 @@ function Level:destroy()
     end
 	if self.target then
 		self.target:destroy()
+    end
+	if self.rollingSound then
+		self.rollingSound:stop()
 	end
 
 	if self.ambientMusicName then
@@ -987,6 +1049,7 @@ function Level:reset()
 
     self.blitzMeter = 0
 	self.blitzMeterCooldown = 0
+	self.shotLastHotFrogBall = false
     self.multiplier = 1
 	-- TODO: Fix this unless this is the only way.
     -- For some stupid reason, _Game:getCurrentProfile() doesn't work here.
@@ -1142,12 +1205,13 @@ function Level:serialize()
         stateCount = self.stateCount,
 		powerupList = self.powerupList,
 		lastPowerupDeltas = self.lastPowerupDeltas,
-        target = (self.target and self.target:serialize()) or {},
+        target = (self.target and self.target:serialize()),
         targetSecondsCooldown = self.targetSecondsCooldown,
         targetInitialDelaySecondsElapsed = self.targetInitialDelaySecondsElapsed,
-		targetHitScore = self.targetHitScore,
+        targetHitScore = self.targetHitScore,
 		blitzMeter = self.blitzMeter,
-		blitzMeterCooldown = self.blitzMeterCooldown,
+        blitzMeterCooldown = self.blitzMeterCooldown,
+		shotLastHotFrogBall = self.shotLastHotFrogBall,
 		multiplier = self.multiplier,
 		controlDelay = self.controlDelay,
 		finish = self.finish,
@@ -1203,6 +1267,7 @@ function Level:deserialize(t)
 	self.targetInitialDelaySecondsElapsed = t.targetInitialDelaySecondsElapsed
 	self.blitzMeter = t.blitzMeter
 	self.blitzMeterCooldown = t.blitzMeterCooldown
+	self.shotLastHotFrogBall = t.shotLastHotFrogBall
 	self.multiplier = t.multiplier
 	self.lost = t.lost
 	-- Utils
