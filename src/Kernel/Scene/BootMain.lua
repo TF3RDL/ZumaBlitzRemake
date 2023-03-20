@@ -1,11 +1,11 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class BootMain
 ---@overload fun(bootScreen):BootMain
 local BootMain = class:derive("BootMain")
 
-local Vec2 = require("src/Essentials/Vector2")
-local Button = require("src/Kernel/UI/Button")
+local Vec2 = require("src.Essentials.Vector2")
+local Button = require("src.Kernel.UI.Button")
 
 
 
@@ -13,8 +13,8 @@ function BootMain:new(bootScreen)
   	self.bootScreen = bootScreen
 
 	-- prepare fonts of various sizes
-	self.font = love.graphics.newFont()
-	self.fontBig = love.graphics.newFont(18)
+	self.font = love.graphics.newFont("assets/dejavusans.ttf")
+	self.fontBig = love.graphics.newFont("assets/dejavusans.ttf", 18)
 
 	-- github url link
 	self.url = "https://github.com/ZumaBlitzRemake/ZumaBlitzRemake"
@@ -146,12 +146,21 @@ function BootMain:draw()
 	-- HEADER
 	-----------------------------
 	love.graphics.setFont(self.fontBig)
-	love.graphics.print("OpenSMCE Boot Menu", 30, 25)
+	love.graphics.print("OpenSMCE Boot Menu", 30, 22)
 	local s = string.format("Version: %s (%s)", _VERSION_NAME, _VERSION)
-	love.graphics.print(s, 770 - self.fontBig:getWidth(s), 25)
-	s = string.format("Build %s", _BUILD_NUMBER)
+	love.graphics.print(s, 770 - self.fontBig:getWidth(s), 22)
+
 	love.graphics.setFont(self.font)
-	love.graphics.print(s, 770 - self.font:getWidth(s), 44)
+	local s = "Unable to check the newest version!"
+	love.graphics.setColor(0.5, 0.5, 0.5)
+	if self.bootScreen.versionManager.newestVersionAvailable then
+		s = string.format("Update available! (%s)", self.bootScreen.versionManager.newestVersion)
+		love.graphics.setColor(1, 1, 0)
+	elseif self.bootScreen.versionManager.newestVersion then
+		s = "Up to date!"
+		love.graphics.setColor(0, 1, 0)
+	end
+	love.graphics.print(s, 770 - self.font:getWidth(s), 41)
 
 	-----------------------------
 	-- NOTES
@@ -182,8 +191,9 @@ Thank you for your support!
 	love.graphics.setColor(1, 1, 1)
 	love.graphics.setFont(self.fontBig)
 	love.graphics.print(self.url, 45, 175)
+	-- Frame
 	love.graphics.setLineWidth(4)
-	love.graphics.rectangle("line", 30, 60, 740, 150) -- frame
+	love.graphics.rectangle("line", 30, 60, 740, 150)
 
 	-----------------------------
 	-- GAME LIST

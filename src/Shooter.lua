@@ -1,15 +1,15 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class Shooter
 ---@overload fun():Shooter
 local Shooter = class:derive("Shooter")
 
-local Vec2 = require("src/Essentials/Vector2")
-local Sprite = require("src/Essentials/Sprite")
-local Color = require("src/Essentials/Color")
+local Vec2 = require("src.Essentials.Vector2")
+local Sprite = require("src.Essentials.Sprite")
+local Color = require("src.Essentials.Color")
 
-local SphereEntity = require("src/SphereEntity")
-local ShotSphere = require("src/ShotSphere")
+local SphereEntity = require("src.SphereEntity")
+local ShotSphere = require("src.ShotSphere")
 
 
 
@@ -54,6 +54,7 @@ function Shooter:changeTo(name)
     self.movement = self.levelMovement or self.config.movement
 
     self.sprite = self.config.sprite
+    self.hotFrogTransitionLowerSprite = self.config.hotFrogTransitionLowerSprite
     self.hotFrogTransitionSprite = self.config.hotFrogTransitionSprite
     self.shadowSprite = self.config.shadowSprite
     self.speedShotSprite = self.config.speedShotBeam.sprite
@@ -289,7 +290,20 @@ function Shooter:shoot()
         _Game:spawnParticle(sphereConfig.destroyParticle, self:getSpherePos())
         _Game.session:destroyVerticalColor(self.pos.x, sphereConfig.shootBehavior.range, self.color)
     else
-        _Game.session.level:spawnShotSphere(self, self:getSpherePos(), self.angle, self.color, self:getShootingSpeed())
+        if sphereConfig.shootBehavior.type == "multishot" then
+            local spread_max = 30.0
+            local orbs_per_shot = sphereConfig.shootBehavior.amount
+            local shot_angle_offset = -(spread_max / 2)
+            local shot_angle = spread_max / orbs_per_shot
+    
+            for i = 1, orbs_per_shot do
+                local fire_angle = self.angle + math.rad(shot_angle_offset + (shot_angle * i))
+                _Game.session.level:spawnShotSphere(self, self:getSpherePos(), fire_angle, self.color, self:getShootingSpeed())
+            end
+        else
+            _Game.session.level:spawnShotSphere(self, self:getSpherePos(), self.angle, self.color, self:getShootingSpeed())
+        end
+        
         self.sphereEntity = nil
         --self.active = false
         -- knockback
@@ -356,6 +370,28 @@ function Shooter:draw()
     -- retical
     if _EngineSettings:getAimingRetical() then
         self:drawReticle()
+    end
+
+    --[[
+    i probably want to refine it so that the ordering is this:
+    - shadow
+    - bottom layer/shooter
+    - hot frog underlay (for mouth)
+    - current ball
+    - next ball
+    - upper layer
+    - hot frog overlay
+    
+    not sure if jakub will like that tho
+    but the way the ball masks are being handled is so messy right now
+    ]]
+
+    -- FORK-SPECIFIC CODE:
+    -- hot frog transition (lower)
+    ---@type Sprite?
+    local hotfroglowertr = self.config.hotFrogTransitionLowerSprite or nil
+    if hotfroglowertr then
+        hotfroglowertr:draw(self.pos + self.config.spriteOffset:rotate(self.angle), self.config.spriteAnchor, nil, nil, self.angle, nil, _Game.session.level.blitzMeter)
     end
 
     -- this color
@@ -580,10 +616,29 @@ function Shooter:getShootingSpeed()
     local speedShot = _Game:getCurrentProfile():getEquippedPower("speed_shot")
     local powerMultiplier = (speedShot and speedShot:getCurrentLevelData().additiveMultiplier) or 0
 
-    local foodSpeedShot = _MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "shotSpeedModifier") or 0
+    local foodSpeedShot_add = _MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "shotSpeedBase") or 0
+    local foodSpeedShot_mult = _MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "shotSpeedMultiplier") or 0
+    -- Brendan's blog says that the speed boost in Kroakatoa is 175% but it's
+    -- clearly way too fast! We're using the old 75% boost.
+    -- src: http://bchantech.dreamcrafter.com/zumablitz/spiritanimals.php
+    local eagleSpeedShot = (_Game:getCurrentProfile():getActiveMonument() == "spirit_eagle" and 0.75) or 0
     -- TODO: What's the order of speed shot multipliers?
-    -- Is it Speed Shot power > Food Item? And am I doing this one-liner right?
-    return self.config.shootSpeed + (self.config.shootSpeed * powerMultiplier + (self.config.shootSpeed * foodSpeedShot))
+
+    -- modify the speed bonus based on the blitz meter
+    -- Food will affect this by an amount. 
+    
+    local foodSpeedBonusVel_add = _MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "speedUpShotsTotalIncrease") or 0
+    local speedBonusShotSpeed = math.max(_Game.session.level.blitzMeter - 0.5,0) * (1600 + foodSpeedBonusVel_add*2)
+
+    local finalSpeed =  self.config.shootSpeed + (self.config.shootSpeed * powerMultiplier) + foodSpeedShot_add + (self.config.shootSpeed * eagleSpeedShot) + speedBonusShotSpeed
+    finalSpeed = finalSpeed * (1 + foodSpeedShot_mult)
+
+    -- _Log:printt("final speed", "-> " ..  finalSpeed)
+
+    -- Would it also be ideal to set a max speed bonus cap?
+    finalSpeed = math.min(finalSpeed, 2000)
+
+    return finalSpeed
 end
 
 

@@ -1,8 +1,10 @@
 {
+    "$schema": "../../../../schemas/config/food_item.json",
     "displayName": "Chocolate Eggs",
     "sprite": "",
     "effects": {
-        "shotSpeedModifier": 0.30,
-        "spawnStreakModifier": 0.30
+        "shotSpeedMultiplier": 0.30,
+        "curveMaxClumpAdj": 2,
+        "curveMaxSingleAdj": -2
     }
 }

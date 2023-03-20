@@ -1,10 +1,10 @@
 {
-    "map": "JourneyToKroakatoa",
-    "music": "level",
-    "dangerMusic": "danger",
+    "map": "kroakatoa_journey",
+    "music": "game3",
+    "dangerMusic": "danger2",
     "powerupFrequency": 15,
     "individualPowerupFrequencies": {
-        "time": 16,
+        "timeball": 16,
         "multiplier": 18
     },
     "targetFrequency": {

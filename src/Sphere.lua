@@ -1,14 +1,14 @@
 ### This class is not used yet. All sphere algorithms are stored in SphereGroup.lua.
 
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class Sphere
 ---@overload fun(sphereGroup, deserializationTable, color, shootOrigin, shootTime, sphereEntity):Sphere
 local Sphere = class:derive("Sphere")
 
-local Vec2 = require("src/Essentials/Vector2")
-local Color = require("src/Essentials/Color")
-local SphereEntity = require("src/SphereEntity")
+local Vec2 = require("src.Essentials.Vector2")
+local Color = require("src.Essentials.Color")
+local SphereEntity = require("src.SphereEntity")
 
 
 
@@ -29,9 +29,6 @@ function Sphere:new(sphereGroup, deserializationTable, color, shootOrigin, shoot
 	self.prevSphere = nil
 	self.nextSphere = nil
     self.offset = 0
-    -- Temporary value.
-    -- In the future this should be customizable per-level, and in case of ZBR
-	-- this shall be linked to a Power/Food.
 	self.powerupTimeout = 20
 
 	if deserializationTable then
@@ -177,7 +174,7 @@ end
 ---Recalculates the offset this Sphere has from the offset of the Sphere Group it belongs to.
 function Sphere:updateOffset()
 	-- calculate the offset
-	self.offset = self.prevSphere and self.prevSphere.offset + 32 * self.size or 0
+	self.offset = self.prevSphere and self.prevSphere.offset + 29 * self.size or 0
 end
 
 
@@ -188,6 +185,10 @@ end
 function Sphere:changeColor(color, particle)
 	_Game.session.colorManager:decrement(self.color)
 	_Game.session.colorManager:increment(color)
+	if self.danger then
+		_Game.session.colorManager:decrement(self.color, true)
+		_Game.session.colorManager:increment(color, true)
+	end
 	self.color = color
 	self.entity:setColor(color)
     self.config = _Game.configManager.spheres[self.color]
@@ -200,17 +201,16 @@ end
 
 ---Adds a powerup to the current Sphere.
 ---@param powerup string
-function Sphere:addPowerup(powerup)
+---@param noSound boolean?
+function Sphere:addPowerup(powerup, noSound)
     if not powerup then
 		_Log:printt("Sphere", "No powerup defined when calling Sphere:addPowerup()")
 		return
 	end
 	if not (self:isGhost() or self:isOffscreen()) then
         self.powerup = powerup
-		if powerup == "multiplier" then
-			_Game:playSound("sound_events/multiplier_appear.json")
-        else
-			_Game:playSound("sound_events/spawn_powerup.json")
+		if not noSound then
+			_Game:playSound("sound_events/spawn_powerup_"..self.powerup..".json")
 		end
         self.entity:setPowerup(powerup)
     end
@@ -220,9 +220,9 @@ end
 
 ---Removes any powerups from the current Sphere.
 function Sphere:removePowerup()
-	if not self:isGhost() then
+    if not self:isGhost() then
+		_Game:playSound("sound_events/despawn_powerup_"..self.powerup..".json")
         self.powerup = nil
-		_Game:playSound("sound_events/despawn_powerup.json")
         self.entity:setPowerup()
 		self.powerupTimeout = 20
 	end
@@ -285,7 +285,7 @@ function Sphere:deleteVisually(ghostTime, crushed)
 	-- Remove and apply any powerups that this sphere may have.
     if self.powerup and not (self.map.level.finish or self.map.level.lost) then
         local effectTable = {
-            time = function()
+            timeball = function()
                 local secs = 5
 				local sandsOfTime = _Game:getCurrentProfile():getEquippedPower("sands_of_time")
 				if sandsOfTime then
@@ -577,7 +577,7 @@ end
 ---Returns `true` if this sphere has not escaped the spawn point.
 ---@return boolean
 function Sphere:isOffscreen()
-	return self:getOffset() < 32
+	return self:getOffset() < 29
 end
 
 
@@ -672,7 +672,9 @@ end
 ---@return table
 function Sphere:serialize()
 	local t = {
-		color = self.color,
+        color = self.color,
+        powerup = self.powerup,
+		powerupTimeout = self.powerupTimeout,
 		--animationFrame = self.animationFrame, -- who cares about that, you can uncomment this if you do
 		shootOrigin = self.shootOrigin and {x = self.shootOrigin.x, y = self.shootOrigin.y} or nil,
 		shootTime = self.shootTime,
@@ -719,7 +721,8 @@ function Sphere:deserialize(t)
 	self.shootOrigin = t.shootOrigin and Vec2(t.shootOrigin.x, t.shootOrigin.y) or nil
 	self.shootTime = t.shootTime
 	self.ghostTime = t.ghostTime
-	self.powerup = t.currentPowerup
+	self.powerup = t.powerup
+	self.powerupTimeout = t.powerupTimeout
 
 	self.effects = {}
 	if t.effects then

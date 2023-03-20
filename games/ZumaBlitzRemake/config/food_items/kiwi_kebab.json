@@ -1,9 +1,10 @@
 {
+    "$schema": "../../../../schemas/config/food_item.json",
     "displayName": "Kiwi Kebab",
     "sprite": "",
     "effects": {
-        "persistentTargets": true,
-        "fruitValueMultiplier": 0.25,
-        "fruitHitboxRadiusModifier": 0.10
+        "fruitLifetime": 60,
+        "fruitValueModifier": 750,
+        "fruitRadius": 3
     }
 }

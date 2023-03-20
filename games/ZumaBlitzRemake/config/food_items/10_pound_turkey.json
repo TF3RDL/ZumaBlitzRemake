@@ -1,7 +1,8 @@
 {
+    "$schema": "../../../../schemas/config/food_item.json",
     "displayName": "10 Pound Turkey",
     "sprite": "",
     "effects": {
-        "multiplierCapAdditiveModifier": 1
+        "multiplierMaximum": 1
     }
 }

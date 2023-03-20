@@ -1,4 +1,5 @@
 {
+    "$schema": "../../../../schemas/config/food_item.json",
     "displayName": "Key Time Pie",
     "sprite": "",
     "variants": {
@@ -8,6 +9,6 @@
         }
     },
     "effects": {
-        "startingTimeModifier": 5
+        "startingTime": 5
     }
 }

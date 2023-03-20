@@ -1,10 +1,10 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class DummyLevel
 ---@overload fun(path):DummyLevel
 local DummyLevel = class:derive("DummyLevel")
 
-local Map = require("src/Map")
+local Map = require("src.Map")
 
 
 
@@ -29,7 +29,7 @@ end
 
 ---Generates a new sphere color.
 ---@return integer
-function DummyLevel:newSphereColor()
+function DummyLevel:newSphereColor(curColor)
 	return self.colors[math.random(1, #self.colors)]
 end
 

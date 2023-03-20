@@ -34,3 +34,21 @@ function _MathAreKeysInTable(tbl, ...)
     end
     return tbl
 end
+
+
+
+function _MathRound(value)
+	return value % 1 >= 0.5 and math.ceil(value) or math.floor(value)
+end
+
+
+
+function _MathRoundUp(value, roundTo)
+	return math.ceil(value / roundTo) * roundTo
+end
+
+
+
+function _MathRoundDown(value, roundTo)
+	return math.floor(value / roundTo) * roundTo
+end

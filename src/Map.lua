@@ -1,13 +1,14 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class Map
 ---@overload fun(level, path, pathsBehavior, isDummy):Map
 local Map = class:derive("Map")
 
-local Vec2 = require("src/Essentials/Vector2")
-local Sprite = require("src/Essentials/Sprite")
+local Vec2 = require("src.Essentials.Vector2")
+local Sprite = require("src.Essentials.Sprite")
 
-local Path = require("src/Path")
+local Path = require("src.Path")
+local Hole = require("src.Hole")
 
 
 
@@ -41,7 +42,13 @@ function Map:new(level, path, pathsBehavior, isDummy)
 		table.insert(self.paths, Path(self, pathData, pathBehavior))
 	end
     self.shooter = data.shooter
-	self.targetPoints = data.targetPoints
+    self.targetPoints = data.targetPoints
+
+	---@type Hole[]
+    self.holes = {}
+    for _, pathp in pairs(self.paths) do
+		table.insert(self.holes, Hole(pathp))
+    end
 end
 
 
@@ -98,12 +105,17 @@ function Map:draw()
 	end
 
 	-- Objects that will be drown when the BCM is off
-	if not _Debug.e then
-		for i, sprite in ipairs(self.sprites) do
-			if not sprite.background then
-				sprite.sprite:draw(sprite.pos)
-			end
-		end
+    if not _Debug.e then
+        for i, sprite in ipairs(self.sprites) do
+            if not sprite.background then
+                sprite.sprite:draw(sprite.pos)
+            end
+        end
+    end
+
+    -- Holes
+	for _, hole in pairs(self.holes) do
+		hole:draw()
 	end
 end
 

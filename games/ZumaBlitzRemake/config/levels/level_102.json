@@ -1,10 +1,10 @@
 {
     "map": "snakepit_bronze",
-    "music": "level",
-    "dangerMusic": "danger",
+    "music": "game3",
+    "dangerMusic": "danger2",
     "powerupFrequency": 15,
     "individualPowerupFrequencies": {
-        "time": 16,
+        "timeball": 16,
         "multiplier": 18
     },
     "powerupGenerator": "vanilla_powerup.json",

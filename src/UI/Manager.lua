@@ -1,12 +1,10 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class UIManager
 ---@overload fun():UIManager
 local UIManager = class:derive("UIManager")
 
-local strmethods = require("src/strmethods")
-
-local UIWidget = require("src/UI/Widget")
+local UIWidget = require("src.UI.Widget")
 
 
 
@@ -74,6 +72,31 @@ function UIManager:new()
     profileIsCheckpointUnlocked = function(n) return _Game:getCurrentProfile():isCheckpointUnlocked(n) end,
     profileIsCheckpointUpcoming = function() return _Game:getCurrentProfile():isCheckpointUpcoming() end,
 
+    -- BEGIN FORK-SPECIFIC FUNCTIONS --
+    -- TODO: Migrate these to UI2 once implemented
+    
+    openURL = function(url) love.system.openURL(url) end,
+
+    getPower = function(power) return _Game.configManager:getPower(power) end,
+    getFoodItem = function(foodItem) return _Game.configManager:getFoodItem(foodItem) end,
+    getFoodItems = function() return _Game.configManager.foodItems end,
+
+    profileGetPowerCatalog = function(power) return _Game:getCurrentProfile().powerCatalog end,
+    profileGetPowerLevel = function(power) return _Game:getCurrentProfile():getPowerLevel(power) end,
+    profileGetEquippedPowers = function() return _Game:getCurrentProfile().equippedPowers end,
+    
+    profileGetFoodInventory = function(power) return _Game:getCurrentProfile().foodInventory end,
+    profileSetEquippedFood = function(food) _Game:getCurrentProfile().equippedFood = food end,
+    profileGetEquippedFood = function() return _Game:getCurrentProfile().equippedFood end,
+    profileGetEquippedFoodData = function() return _Game.configManager:getFoodItem(_Game:getCurrentProfile().equippedFood) end,
+    
+    profileGetFrogatar = function() return _Game:getCurrentProfile():getFrogatar() end,
+    profileSetFrogatar = function(frogatar) _Game:getCurrentProfile():setFrogatar(frogatar) end,
+    profileGetMonument = function() return _Game:getCurrentProfile():getActiveMonument() end,
+    profileSetMonument = function(monument) _Game:getCurrentProfile():setActiveMonument(monument) end,
+
+    -- END FORK-SPECIFIC FUNCTIONS --
+
     profileSetVariable = function(name, value) _Game:getCurrentProfile():setVariable(name, value) end,
     profileGetVariable = function(name) return _Game:getCurrentProfile():getVariable(name) end,
 
@@ -99,7 +122,7 @@ end
 function UIManager:initSplash()
   self.widgets.splash = UIWidget("Splash", _LoadJson(_ParsePath("ui/splash.json")))
 
-  self.script = require(_ParsePath("ui/script"))
+  self.script = require(_ParsePathDots("ui.script"))
   self:executeCallback("init")
 end
 
@@ -221,6 +244,17 @@ function UIManager:resetActive()
 	end
 end
 
+---Returns whether any meaningful UI widget like a button has been hovered.
+---@return boolean
+function UIManager:isButtonHovered()
+  for widgetN, widget in pairs(self.widgets) do
+    if widget:isButtonHovered() then
+      return true
+    end
+  end
+  return false
+end
+
 
 
 function UIManager:getWidget(names)
@@ -243,7 +277,7 @@ function UIManager:optionsLoad()
   -- TODO: HARDCODED - make it more flexible
   self:getWidget({"root", "Menu_Options", "Frame", "Slot_music", "Slider_Music"}).widget:setValue(_Game.runtimeManager.options:getMusicVolume())
   self:getWidget({"root", "Menu_Options", "Frame", "Slot_sfx", "Slider_Effects"}).widget:setValue(_Game.runtimeManager.options:getSoundVolume())
-  self:getWidget({"root", "Menu_Options", "Frame", "Toggle_Fullscreen"}).widget:setState(_Game.runtimeManager.options:getFullscreen())
+  --self:getWidget({"root", "Menu_Options", "Frame", "Toggle_Fullscreen"}).widget:setState(_Game.runtimeManager.options:getFullscreen())
   self:getWidget({"root", "Menu_Options", "Frame", "Toggle_Mute"}).widget:setState(_Game.runtimeManager.options:getMute())
 end
 
@@ -251,7 +285,7 @@ function UIManager:optionsSave()
   -- TODO: HARDCODED - make it more flexible
   _Game.runtimeManager.options:setMusicVolume(self:getWidget({"root", "Menu_Options", "Frame", "Slot_music", "Slider_Music"}).widget.value)
   _Game.runtimeManager.options:setSoundVolume(self:getWidget({"root", "Menu_Options", "Frame", "Slot_sfx", "Slider_Effects"}).widget.value)
-  _Game.runtimeManager.options:setFullscreen(self:getWidget({"root", "Menu_Options", "Frame", "Toggle_Fullscreen"}).widget.state)
+  --_Game.runtimeManager.options:setFullscreen(self:getWidget({"root", "Menu_Options", "Frame", "Toggle_Fullscreen"}).widget.state)
   _Game.runtimeManager.options:setMute(self:getWidget({"root", "Menu_Options", "Frame", "Toggle_Mute"}).widget.state)
 end
 

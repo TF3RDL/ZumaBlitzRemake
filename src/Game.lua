@@ -1,4 +1,4 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class Game
 ---@overload fun(name):Game
@@ -6,21 +6,19 @@ local Game = class:derive("Game")
 
 
 
-local strmethods = require("src/strmethods")
+local Vec2 = require("src.Essentials.Vector2")
 
-local Vec2 = require("src/Essentials/Vector2")
+local Timer = require("src.Timer")
 
-local Timer = require("src/Timer")
+local ConfigManager = require("src.ConfigManager")
+local ResourceManager = require("src.ResourceManager")
+local GameModuleManager = require("src.GameModuleManager")
+local RuntimeManager = require("src.RuntimeManager")
+local Session = require("src.Session")
 
-local ConfigManager = require("src/ConfigManager")
-local ResourceManager = require("src/ResourceManager")
-local GameModuleManager = require("src/GameModuleManager")
-local RuntimeManager = require("src/RuntimeManager")
-local Session = require("src/Session")
-
-local UIManager = require("src/UI/Manager")
-local UI2Manager = require("src/UI2/Manager")
-local ParticleManager = require("src/Particle/Manager")
+local UIManager = require("src.UI.Manager")
+local UI2Manager = require("src.UI2.Manager")
+local ParticleManager = require("src.Particle.Manager")
 
 
 
@@ -38,12 +36,11 @@ function Game:new(name)
 	self.session = nil
 
 	self.uiManager = nil
-	self.ui2Manager = nil
 	self.particleManager = nil
 
 
 	-- revert to original font size
-	love.graphics.setFont(love.graphics.newFont())
+	love.graphics.setFont(love.graphics.newFont("assets/dejavusans.ttf"))
 end
 
 
@@ -57,7 +54,7 @@ function Game:init()
 
 	-- Step 2. Initialize the window
 	local res = self.configManager.config.nativeResolution
-	love.window.setMode(res.x, res.y, {resizable = true})
+	love.window.setMode(res.x, res.y, {resizable = false})
 	love.window.setTitle(self.configManager:getWindowTitle())
 
 	-- Step 3. Initialize RNG and timer
@@ -78,12 +75,9 @@ function Game:init()
 	local p = self:getCurrentProfile()
 	self.satMode = p and p.ultimatelySatisfyingMode
 
-	-- Step 8. Set up the UI Manager
-	self.uiManager = UIManager()
+	-- Step 8. Set up the UI Manager or the experimental UI2 Manager
+	self.uiManager = self.configManager.config.useUI2 and UI2Manager() or UIManager()
 	self.uiManager:initSplash()
-
-	-- Step 9. Set upt the experimental UI2 Manager
-	--self.ui2Manager = UI2Manager()
 end
 
 
@@ -179,7 +173,7 @@ function Game:updateRichPresence()
 			powerString = "None"
         end
 		if profile.equippedFood then
-			foodString = profile:getEquippedFoodItem(profile.equippedFood).displayName
+			foodString = profile:getEquippedFoodItem().displayName
         else
 			foodString = "None"
         end
@@ -192,13 +186,29 @@ function Game:updateRichPresence()
 			spirit_turtle = "Turtle"
         }
         local frogatarStrings = {
-			frogatar_basic = "Basic"
+            frogatar_basic = "Basic Frog",
+            frogatar_cobalt = "Cobalt Frog",
+            frogatar_werewolf = "Werefrog",
+            frogatar_dracula = "Count Frogula",
+			frogatar_skeleton = "Skelefrog",
+            frogatar_hunter = "Hunter Frog",
+            frogatar_gatherer = "Gatherer Frog",
+            frogatar_mystic = "Mystic Frog",
+            frogatar_wild = "Wild Frog",
+            frogatar_winter = "Winter Frog",
+            frogatar_patricks = "St. Patricks' Day Frog",
+            frogatar_bunny = "Bunny Frog",
+            frogatar_dragon = "Dragon Frog",
+            frogatar_cat = "Hathaway Cat",
+			frogatar_pink = "Pink Frog",
+			frogatar_progressive = "Progressive Frog",
+			frogatar_golden = "Golden Frog"
         }
 		
 		if profile.monument then
 			smallImageText = "Spirit "..monumentStrings[profile:getActiveMonument()]
         else
-			smallImageText = frogatarStrings[profile:getFrogatar()].." Frog"
+			smallImageText = frogatarStrings[profile:getFrogatar()]
 		end
 
         line1 = string.format(
@@ -262,7 +272,6 @@ function Game:draw()
 		self.particleManager:draw()
 	end
 	self.uiManager:draw()
-	--self.ui2Manager:draw()
 	_Debug:profDraw2Checkpoint()
 
 	-- Borders
@@ -284,13 +293,15 @@ end
 ---@param y integer The Y coordinate of mouse position.
 ---@param button integer The mouse button which was pressed.
 function Game:mousepressed(x, y, button)
-	self.uiManager:mousepressed(x, y, button)
-
-	if self:levelExists() and _MousePos.y < 560 then
-		if button == 1 then
-			self.session.level.shooter:shoot()
-		elseif button == 2 then
-			self.session.level.shooter:swapColors()
+	if self.uiManager:isButtonHovered() then
+		self.uiManager:mousepressed(x, y, button)
+	else
+		if self:levelExists() then
+			if button == 1 then
+				self.session.level.shooter:shoot()
+			elseif button == 2 then
+				self.session.level.shooter:swapColors()
+			end
 		end
 	end
 end
@@ -317,7 +328,7 @@ function Game:keypressed(key)
 		if key == "left" then shooter.moveKeys.left = true end
 		if key == "right" then shooter.moveKeys.right = true end
 		if key == "up" then shooter:shoot() end
-		if key == "down" then shooter:swapColors() end
+		if key == "space" then shooter:swapColors() end
 	end
 end
 
@@ -394,14 +405,15 @@ end
 ---Enables or disables fullscreen.
 ---@param fullscreen boolean Whether the fullscreen mode should be active.
 function Game:setFullscreen(fullscreen)
+	local res = _Game.configManager.config.nativeResolution
 	if fullscreen == love.window.getFullscreen() then return end
 	if fullscreen then
 		local _, _, flags = love.window.getMode()
 		_DisplaySize = Vec2(love.window.getDesktopDimensions(flags.display))
 	else
-		_DisplaySize = _NATIVE_RESOLUTION
+		_DisplaySize = Vec2(res.x, res.y)
 	end
-	love.window.setMode(_DisplaySize.x, _DisplaySize.y, {fullscreen = fullscreen, resizable = true})
+	love.window.setMode(_DisplaySize.x, _DisplaySize.y, {fullscreen = fullscreen, resizable = false})
 end
 
 

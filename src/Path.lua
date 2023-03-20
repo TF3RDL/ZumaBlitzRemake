@@ -1,13 +1,13 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class Path
 ---@overload fun(map, pathData, pathBehavior):Path
 local Path = class:derive("Path")
 
-local Vec2 = require("src/Essentials/Vector2")
-local SphereChain = require("src/SphereChain")
-local BonusScarab = require("src/BonusScarab")
-local Scorpion = require("src/Scorpion")
+local Vec2 = require("src.Essentials.Vector2")
+local SphereChain = require("src.SphereChain")
+local BonusScarab = require("src.BonusScarab")
+local Scorpion = require("src.Scorpion")
 
 
 
@@ -32,8 +32,40 @@ function Path:new(map, pathData, pathBehavior)
 	end
 
 	self.colors = pathBehavior.colors
-	self.colorStreak = pathBehavior.colorStreak
-	self.spawnRules = pathBehavior.spawnRules
+	self.colorStreak = pathBehavior.colorStreak or 0.45
+
+	-- FORK-SPECIFIC CHANGE:
+	-- Optional parameters maxSingles, maxClumps per level
+	-- ZB maps sets max singles to 2 and max clump to 5 by default
+	self.maxSingles = pathBehavior.maxSingles or 2
+	self.maxClumps = pathBehavior.maxClumps or 5
+	self.curSingles = 0
+	self.curClump = 0
+	self.spawnRules = pathBehavior.spawnRules or "continuous"
+
+	-- handle adjustments from food effects
+	self.adjustSingles = _MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "curveMaxSingleAdj") or 0
+	self.adjustClumps = _MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "curveMaxClumpAdj") or 0
+	self.adjustCurveMatchPercent = _MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "curveMatchPercentAdj") or 0
+	self.adjustCurveMatchPercent  = self.adjustCurveMatchPercent / 100
+
+--	_Log:printt("Single Adjustment", "-> " .. self.adjustSingles)
+--	_Log:printt("Clump Adjustment", "-> " .. self.adjustClumps)
+--	_Log:printt("Curve Adjustment", "-> " .. self.adjustCurveMatchPercent)
+
+	self.maxSingles = self.maxSingles + self.adjustSingles
+	self.maxClumps = self.maxClumps + self.adjustClumps
+	self.colorStreak = self.colorStreak + self.adjustCurveMatchPercent
+
+	-- handle invalid values
+	self.colorStreak = math.max(self.colorStreak,0)
+	self.colorStreak = math.min(self.colorStreak,1)
+	self.maxSingles = math.max(self.maxSingles,0)
+	self.maxClumps = math.max(self.maxClumps,1)
+
+--	_Log:printt("Max Singles", "-> " .. self.maxSingles)
+--	_Log:printt("Max Clumps", "-> " .. self.maxClumps)
+
 	if _Game.satMode then
 		local n = _Game:getCurrentProfile():getUSMNumber() * 10
 		self.spawnRules = {
@@ -138,13 +170,18 @@ function Path:update(dt)
 		if scorpion.delQueue then table.remove(self.scorpions, i) end
 	end
 
+    -- Holes
+	for _, hole in pairs(self.map.holes) do
+		hole:update(dt)
+	end
+
 	-- Path Clears
     if self:isValidForCurveClear() then
 		self.pathClearGranted = true
-        -- Curve Clears in Kroakatoa grant 1000 + total time elapsed.
+        -- Curve Clears in Kroakatoa grant 1000 + (total time elapsed * 100).
         -- Reference: http://bchantech.dreamcrafter.com/zumablitz/scoringmechanics_relaunch.php
-        local score = 1000 + math.floor(self.map.level.stateCount)
-		local extraPoints = _MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "curveClearPointModifier")
+        local score = 1000 + (math.floor(self.map.level.time) * 100)
+		local extraPoints = _Game:getCurrentProfile():getEquippedFoodItemEffects().curveClearPointModifier
 		if extraPoints then
 			score = score + extraPoints
 		end
@@ -157,9 +194,19 @@ function Path:update(dt)
         )
 		_Game:playSound("sound_events/curve_clear.json")
 
-		local shouldGiveOneSecond = _MathIsValueInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "curveClearsGiveOneSecond")
-		if not self.map.level.finish and shouldGiveOneSecond then
+		-- TODO: Use the value of curveClearTicksAdded for adding time instead of 1
+		local shouldGiveOneSecond = _MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "curveClearTicksAdded")
+		if (not self.map.level.finish) and shouldGiveOneSecond then
 			self.map.level:applyEffect({type = "addTime", amount = 1})
+        end
+		
+        -- Accelerate spheres on Curve Clear.
+        -- TODO: Is there a better way to do this? Especially when determining
+		-- a set distance for the spheres to reach after it's triggered.
+		for _, sphereChain in pairs(self.sphereChains) do
+            for _, sphereGroup in pairs(sphereChain.sphereGroups) do
+                sphereGroup.speed = 1200
+			end
 		end
 	-- 10% of this path's length to be able to reclaim path clear bonus
 	elseif self:getMaxOffset() > self.length * 0.1 then
@@ -169,10 +216,14 @@ end
 
 
 
----Returns a random entry from the list of sphere types this Path can spawn.
+---Returns a random entry from the list of sphere types this Path can spawn. This cannot return the same color.
 ---@return integer
-function Path:newSphereColor()
-	return self.colors[math.random(1, #self.colors)]
+function Path:newSphereColor(curColor)
+	repeat
+		pendingColor = math.random(1, #self.colors)
+	until curColor ~= pendingColor
+	
+	return self.colors[pendingColor]
 end
 
 
@@ -423,11 +474,16 @@ end
 ---Returns 0 if this path is not in danger, and linearly interpolates from 0 (danger point) to 1 (end of the path).
 ---@return number
 function Path:getDangerProgress()
-	local maxOffset = self:getMaxOffset()
-	if not self:getDanger(maxOffset) then
-		return 0
-	end
-	return ((maxOffset / self.length) - self.dangerDistance) / (1 - self.dangerDistance)
+    local maxOffset = self:getMaxOffset()
+    -- FORK-SPECIFIC CHANGE:
+    -- Return 1 if the level is lost so the skull is wide open on failure.
+	-- Also, math.min the return value since it messes with the skull rendering.
+    if self.map.level.lost then
+        return 1
+    elseif not self:getDanger(maxOffset) then
+        return 0
+    end
+	return math.min(1, ((maxOffset / self.length) - self.dangerDistance) / (1 - self.dangerDistance))
 end
 
 

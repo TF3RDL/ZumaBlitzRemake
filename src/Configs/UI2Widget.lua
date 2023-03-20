@@ -1,11 +1,11 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class UI2WidgetConfig
 ---@overload fun(data):UI2WidgetConfig
 local UI2WidgetConfig = class:derive("UI2WidgetConfig")
 
-local Vec2 = require("src/Essentials/Vector2")
-local Color = require("src/Essentials/Color")
+local Vec2 = require("src.Essentials.Vector2")
+local Color = require("src.Essentials.Color")
 
 
 
@@ -34,10 +34,18 @@ function UI2WidgetConfig:new(data, path)
         ---@type string
         self.shape = data.shape or "rectangle"
         self.callbacks = data.callbacks or {}
+    elseif self.type == "spriteProgress" then
+        self.sprite = _Game.resourceManager:getSprite(data.sprite)
+        self.value = data.value or 0
+        ---@type boolean
+        self.smooth = data.smooth
     elseif self.type == "text" then
         self.font = _Game.resourceManager:getFont(data.font)
         self.text = data.text or ""
         self.color = _ParseColor(data.color) or Color()
+    elseif self.type == "level" then
+        ---@type string
+        self.level = data.level
     else
         --error(string.format("Failed to load file %s, unknown Widget type: %s (expected \"rectangle\", \"sprite\", \"spriteButton\" or \"text\")", path, self.type))
     end

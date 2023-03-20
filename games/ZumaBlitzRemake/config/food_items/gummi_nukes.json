@@ -1,11 +1,9 @@
 {
+    "$schema": "../../../../schemas/config/food_item.json",
     "displayName": "Gummi Nukes",
     "sprite": "",
     "effects": {
-        "powerupFrequencyModifier": {
-            "powerup": "color_nuke",
-            "value": 7
-        },
-        "colorNukeUsagePoints": 500
+        "colorNukeFrequencyBase": -2,
+        "colorNukePointsBase": 500
     }
 }

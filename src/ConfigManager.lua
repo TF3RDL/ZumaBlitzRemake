@@ -1,14 +1,14 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class ConfigManager
 ---@overload fun():ConfigManager
 local ConfigManager = class:derive("ConfigManager")
 
-local CollectibleGeneratorManager = require("src/CollectibleGenerator/Manager")
+local CollectibleGeneratorManager = require("src.CollectibleGenerator.Manager")
 
-local ShooterConfig = require("src/Configs/Shooter")
-local Power = require("src/Configs/Power")
-local FoodItem = require("src/Configs/FoodItem")
+local ShooterConfig = require("src.Configs.Shooter")
+local Power = require("src.Configs.Power")
+local FoodItem = require("src.Configs.FoodItem")
 
 
 
@@ -97,15 +97,17 @@ function ConfigManager:loadStuffAfterResources()
         if food.variants then
             for variant, data in pairs(food.variants) do
 				_Log:printt("ConfigManager", string.format("Loading food variant %s (base: %s). ID: %s", variant, food._name, food._name.."_"..variant))
-                local foodVariant = {
-					_name = food._name.."_"..variant,
+                local internalName = food._name.."_"..variant
+				local foodVariant = {
+					_name = internalName,
                     displayName = data.displayName or food.displayName,
                     sprite = data.sprite or food.sprite,
                     price = data.price or food.price,
                 }
                 local instance = FoodItem(foodVariant, food._path)
-				instance.variantBase = food._name
-                table.insert(self.foodItems, instance)
+                instance.variantBase = food._name
+				instance:syncVariantEffects()
+				self.foodItems[internalName] = instance
 			end
 		end
     end
@@ -184,6 +186,12 @@ end
 ---@return boolean
 function ConfigManager:isRichPresenceEnabled()
 	return self.config.richPresence.enabled
+end
+
+---Returns the Rich Presence Application ID for this game, if it exists.
+---@return string?
+function ConfigManager:getRichPresenceApplicationID()
+	return self.config.richPresence.applicationID
 end
 
 

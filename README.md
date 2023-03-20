@@ -2,7 +2,7 @@
 <div align="center">
 </div>
 
-![Discord](https://img.shields.io/discord/315202394118029314?color=%235865F2&label=Discord%20&logo=discord&style=flat-square)
+[![Discord](https://img.shields.io/discord/315202394118029314?color=%235865F2&label=Discord%20&logo=discord&style=flat-square)](https://discord.gg/gJgy5x5)
 
 > A preservation & recreation project for **Zuma Blitz** - an old Facebook game
 from 2010-2017, specifically the *Kroakatoa Island* update
@@ -21,26 +21,38 @@ This project uses [OpenSMCE](https://github.com/jakubg1/OpenSMCE) as it's
 framework. You will then need to install [LÖVE2D 11.3](https://github.com/love2d/love/releases/tag/11.3)
 on your machine.
 
-## Installation
+## Running from source
 Fetch the repository, as you would any other, or download the repository.
 
-You will then need to run `start.bat`. If you are on a non-Windows operating
-system, create a terminal script:
+### Windows
+Run `start.bat`.
+
+### macOS
+Do the following in a terminal:
+```sh
+cd ZumaBlitzRemake
+chmod +x ./start-macos.command
+After that, you can double-click on `start-macos.command`.
 ```
-(Directory to where the LOVE executable is) ./ --console
+### Linux
+Navigate to the main folder in a terminal and type in:
+```
+love .
 ```
 
 ## Building
+
 ### Windows
 Make sure you have [LÖVE2D 11.3](https://github.com/love2d/love/releases/tag/11.3)
 installed on your machine. 32-bit or 64-bit doesn't matter - although the build
 script can detect both 32-bit and 64-bit EXE installation directories.
 
-You will also need [7-zip](https://www.7-zip.org/download.html) installed
+You will also need [7-zip](https://www.7-zip.org/download.html) and
+ installed
 and it's directory added in `%PATH%`.
 
 Then, simply run `build.bat`. You will see a new folder named `build` after
-it's finished.
+it's finished. To skip creation of `*.zip` files, pass `--no-packages`.
 
 ### macOS
 I unfortunately don't have a Mac, so someone else has to build these.
@@ -71,22 +83,22 @@ Any new features added in this fork may be added for OpenSMCE in general.
   - Discord: Shambles#3117
 
 ### Contributors
+- **Brendan Chan** - Zuma Blitz SWF file contribution
+  - GitHub: [bchantech](https://github.com/bchantech)
 - **Cat Warrior** - Asset contributions
   - GitHub: [CatWarriorOfficial](https://github.com/CatWarriorOfficial)
   - Discord: Cta warrior#4126
 - **Nagi** - Asset contributions
   - GitHub: [Nxgi](https://github.com/Nxgi)
   - Discord: nagi#1547
-- **cuteio14** - Asset fixes
-  - GitHub: [cuteio14](https://github.com/cuteio14)
-  - Discord: cuteio14#7664
+- **FREN-ZC** - Asset fixes
+  - GitHub: [FREN-ZC](https://github.com/FREN-ZC)
+  - Discord: FREN-Z\C#7664
 - **Tacos** - Sound ripping from videos
   - Discord: Tacos#8810
 - **Glows Lythos** - Board backgrounds
   - GitHub: [glowslythos](https://github.com/glowslythos)
-  - Discord: glowslythos#0001
+  - Discord: glowslythos#0002
 - **Oreztov** - Wild Ball 3d cube recreation
   - GitHub: [Oreztov](https://github.com/Oreztov)
   - Discord: Oreztov#2411
-- **JeffMakesGames** - ZB Kroakatoa Music
-  - [YouTube playlist](https://www.youtube.com/playlist?list=PLEdhomj1r33983BrSBOdUrh0lpAFC-sQ-)

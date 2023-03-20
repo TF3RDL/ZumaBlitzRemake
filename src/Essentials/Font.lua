@@ -1,11 +1,11 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class ColorPalette
 ---@overload fun(path):ColorPalette
 local Font = class:derive("Font")
 
-local Vec2 = require("src/Essentials/Vector2")
-local Color = require("src/Essentials/Color")
+local Vec2 = require("src.Essentials.Vector2")
+local Color = require("src.Essentials.Color")
 
 
 
@@ -55,14 +55,18 @@ end
 function Font:getTextSize(text)
 	if self.type == "image" then
 		local size = Vec2(0, self.height)
+		local lineWidth = 0
 		for i = 1, text:len() do
 			local character = text:sub(i, i)
 			if character == "\n" then
+				size.x = math.max(size.x, lineWidth)
+				lineWidth = 0
 				size.y = size.y + self.height
 			else
-				size.x = size.x + self:getCharacter(character).width
+				lineWidth = lineWidth + self:getCharacter(character).width
 			end
 		end
+		size.x = math.max(size.x, lineWidth)
 		return size
 	elseif self.type == "truetype" then
 		local size = Vec2(self.font:getWidth(text), self.font:getHeight())

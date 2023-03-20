@@ -1,13 +1,13 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class ShotSphere
 ---@overload fun(deserializationTable, shooter, pos, angle, color, speed):ShotSphere
 local ShotSphere = class:derive("ShotSphere")
 
-local Vec2 = require("src/Essentials/Vector2")
-local Color = require("src/Essentials/Color")
+local Vec2 = require("src.Essentials.Vector2")
+local Color = require("src.Essentials.Color")
 
-local SphereEntity = require("src/SphereEntity")
+local SphereEntity = require("src.SphereEntity")
 
 
 
@@ -88,7 +88,7 @@ function ShotSphere:moveStep()
 
 	-- add if there's a sphere nearby
 	local nearestSphere = _Game.session:getNearestSphere(self.pos)
-	if nearestSphere.dist and nearestSphere.dist < 32 then
+	if nearestSphere.dist and nearestSphere.dist < 29 then
 		-- If hit sphere is fragile, destroy the fragile spheres instead of hitting.
 		if nearestSphere.sphere:isFragile() then
 			nearestSphere.sphere:matchEffectFragile()
@@ -127,6 +127,9 @@ function ShotSphere:moveStep()
 				_Game.session:replaceColor(hitColor, sphereConfig.hitBehavior.color, sphereConfig.hitBehavior.particle)
 				self:destroy()
 				_Game:spawnParticle(sphereConfig.destroyParticle, self.pos)
+            elseif sphereConfig.hitBehavior.type == "pierce" then
+				_Game.session:destroySingleSphere(nearestSphere.sphere)
+				self.hitSphere = nil
 			else
 				if self.hitSphere.half then
 					self.hitSphere.sphereID = self.hitSphere.sphereID + 1
@@ -139,7 +142,7 @@ function ShotSphere:moveStep()
 					p = self.hitSphere.sphereGroup:getSpherePos(self.hitSphere.sphereID)
 				else
 					-- the inserted ball IS at the end of the group
-					local o = self.hitSphere.sphereGroup:getLastSphereOffset() + 32
+					local o = self.hitSphere.sphereGroup:getLastSphereOffset() + 29
 					p = self.hitSphere.path:getPos(o)
 				end
 				-- calculate length from the current position
@@ -171,9 +174,11 @@ function ShotSphere:moveStep()
 			if sphereConfig.hitBehavior.type == "fireball" then
                 _Game.session:destroyRadiusColor(self.pos, sphereConfig.hitBehavior.range, self.color)
 				_Game:playSound(sphereConfig.hitSound, 1, self.pos)
+            end
+			if sphereConfig.hitBehavior.type ~= "pierce" then
+				self:destroy()
+				_Game:spawnParticle(sphereConfig.destroyParticle, self.pos)
 			end
-			self:destroy()
-			_Game:spawnParticle(sphereConfig.destroyParticle, self.pos)
 		end
 	end
 
@@ -266,7 +271,7 @@ function ShotSphere:drawDebug()
 		local p = _PosOnScreen(Vec2(self.pos.x, i))
 		love.graphics.circle("fill", p.x, p.y, 2)
 		local nearestSphere = _Game.session:getNearestSphere(Vec2(self.pos.x, i))
-		if nearestSphere.dist and nearestSphere.dist < 32 then
+		if nearestSphere.dist and nearestSphere.dist < 29 then
 			love.graphics.setLineWidth(3)
 			local p = _PosOnScreen(nearestSphere.pos)
 			love.graphics.circle("line", p.x, p.y, 16 * _GetResolutionScale())

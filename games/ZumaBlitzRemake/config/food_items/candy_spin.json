@@ -1,8 +1,9 @@
 {
+    "$schema": "../../../../schemas/config/food_item.json",
     "displayName": "Candy Spin",
     "sprite": "",
     "effects": {
-        "maxSpinTargetsAdditiveModifier": 1,
-        "spinTargetChanceMultiplier": 4
+        "treasureSpawnMax": 1,
+        "treasurePercentChance": 20
     }
 }

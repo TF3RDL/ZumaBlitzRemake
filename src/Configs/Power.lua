@@ -1,10 +1,10 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class Power
 ---@overload fun(data):Power
 local Power = class:derive("Power")
 
-local Profile = require("src/Profile")
+local Profile = require("src.Profile")
 
 
 
@@ -26,7 +26,16 @@ end
 ---Updates the currentLevel value.
 function Power:updateCurrentLevel()
     local profile = _Game:getCurrentProfile()
-    self.currentLevel = (profile and profile:getPowerLevel(self._name)) or 1
+    if not profile then
+        return
+    end
+    if profile:getPowerLevel(self._name) > self.maxLevel then
+        _Log:printt("Power", "Power "..self._name.." is over max level!")
+        self.currentLevel = self.maxLevel
+        profile.powerCatalog[self._name].level = self.maxLevel
+    else
+        self.currentLevel = (profile and profile:getPowerLevel(self._name)) or 1
+    end
 end
 
 

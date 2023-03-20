@@ -1,17 +1,19 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class SphereGroup
 ---@overload fun(sphereChain, deserializationTable):SphereGroup
 local SphereGroup = class:derive("SphereGroup")
 
-local Vec2 = require("src/Essentials/Vector2")
-local Sprite = require("src/Essentials/Sprite")
-local Color = require("src/Essentials/Color")
+local Vec2 = require("src.Essentials.Vector2")
+local Sprite = require("src.Essentials.Sprite")
+local Color = require("src.Essentials.Color")
 
-local Sphere = require("src/Sphere")
+local Sphere = require("src.Sphere")
 
 
 
+---@param sphereChain SphereChain
+---@param deserializationTable table?
 function SphereGroup:new(sphereChain, deserializationTable)
 	self.sphereChain = sphereChain
 	self.map = sphereChain.map
@@ -55,6 +57,20 @@ function SphereGroup:update(dt)
 	else
 		self.maxSpeed = 0
 		self.matchCheck = true
+	end
+
+    -- FORK-SPECIFIC CODE:
+    -- For Zuma sphere physics, immediately stop the next group from sliding back if
+    -- the player blocks a same-colored sphere, preventing magnetization.
+	-- Fixes issue #14
+    if self.nextGroup and self.nextGroup:isMagnetizing() then
+        local gapSize = self.nextGroup:getBackPos() - self:getFrontPos()
+		local nextFirst = self.nextGroup:getFirstSphere().color
+        local thisLast = self:getLastSphere().color
+		-- this doesn't account for scarabs yet, please refactor when adding to OpenSMCE upstream
+		if gapSize > 0 and not (nextFirst == thisLast) then
+			self.nextGroup.speed = 0
+		end
 	end
 
 	-- If this group is the first one, it can push spheres forward.
@@ -225,7 +241,7 @@ function SphereGroup:addSphere(color, pos, time, sphereEntity, position, effects
 	end
 	-- if it's a first sphere in the group, lower the offset
 	if position == 1 then
-		self.offset = self.offset - 32
+		self.offset = self.offset - 29
 		self:updateSphereOffsets()
 	end
 	sphere:updateOffset()
@@ -248,7 +264,7 @@ function SphereGroup:destroySphere(position, crushed)
 	if position == 1 then
 		self.spheres[position]:delete(crushed)
 		table.remove(self.spheres, position)
-		self.offset = self.offset + 32
+		self.offset = self.offset + 29
 		self:updateSphereOffsets()
 		self:checkUnfinishedDestructionAtSpawn()
 	elseif position == #self.spheres then
@@ -283,7 +299,7 @@ function SphereGroup:destroySpheres(position1, position2)
 			self.spheres[1]:delete()
 			table.remove(self.spheres, 1)
 		end
-		self.offset = self.offset + position2 * 32
+		self.offset = self.offset + position2 * 29
 		self:updateSphereOffsets()
 		self:checkUnfinishedDestructionAtSpawn()
 	elseif position2 == #self.spheres then -- or maybe on the end?
@@ -378,7 +394,8 @@ function SphereGroup:move(offset)
 		not self:isMagnetizing() and
 		not self:hasShotSpheres() and
 		not self:hasLossProtectedSpheres() and
-		not self:hasGhostSpheres() and
+        not self:hasGhostSpheres() and
+		not self.map.level:areMatchesPredicted() and
 		not self.map.isDummy
 	then
 		self.map.level:lose()
@@ -669,23 +686,18 @@ function SphereGroup:matchAndDeleteEffect(position, effect)
 	-- Play a sound.
     if effectConfig.destroySound == "hardcoded" then
 		local destroySoundParams = MOD_GAME.matchSound(length, self.map.level.combo, self.sphereChain.combo, boostCombo)
-		_Game:playSound(destroySoundParams.name, destroySoundParams.pitch, pos)
-		local chainSoundParams = MOD_GAME.chainSound(self.sphereChain.combo)
-        _Game:playSound(chainSoundParams.name, chainSoundParams.pitch, pos)
+        _Game:playSound(destroySoundParams.name, destroySoundParams.pitch, pos)
+		-- FORK-SPECIFIC CODE: match chime
+        local chainSoundParams = MOD_GAME.chainSound(self.sphereChain.combo)
+		_Game:playSound(chainSoundParams.name, chainSoundParams.pitch, pos)
 	else
 		_Game:playSound(effectConfig.destroySound, 1, pos)
     end
     if #gaps > 0 then
         -- NOTE: Zuma Blitz does not pitch/repeat the Gap Bonus sound in case of double+ gap bonuses.
-		_Game:playSound("sound_events/gap_bonus.json")
-	end
+        _Game:playSound("sound_events/gap_bonus.json")
+    end
 	
-	if effectConfig.destroySound == "hardcoded" then
-		local soundParams = MOD_GAME.matchSound(length, self.map.level.combo, self.sphereChain.combo, boostCombo)
-		_Game:playSound(soundParams.name, soundParams.pitch, pos)
-	else
-		_Game:playSound(effectConfig.destroySound, 1, pos)
-	end
 	-- Boost chain and combo values.
 	if effectConfig.canBoostChain then
 		self.sphereChain.combo = self.sphereChain.combo + 1
@@ -693,14 +705,31 @@ function SphereGroup:matchAndDeleteEffect(position, effect)
 	if boostCombo then
 		self.map.level.combo = self.map.level.combo + 1
     end
+	-- FORK-SPECIFIC CODE: chain chime
 	-- Place this below chain and combo value boosting.
     if boostCombo and self.map.level.combo > 5 then
 		local comboSoundParams = MOD_GAME.comboSound(self.map.level.combo)
 		_Game:playSound(comboSoundParams.name, comboSoundParams.pitch, pos)
 	end
 
+	-- speed bonus - max x12
+	-- TODO: Variables for food that may affect the speed timer, and speed bonus, as well as max increments allowed
+	if self.map.level.speedTimer <= 0 then
+		self.map.level.speedBonus = 0
+	end
+
+	if self.map.level.speedBonus < (12*10) then
+		self.map.level.speedBonus = self.map.level.speedBonus + 10
+	end
+	
+	self.map.level.speedTimer = 2.75
+		_Log:printt("Speed bonus", "-> " ..  self.map.level.speedBonus)
+
+		local speedShot = _Game:getCurrentProfile():getEquippedPower("speed_shot")
+		local powerSpeedBonusMultiplier = (speedShot and speedShot:getCurrentLevelData().speedBonusMultiplier) or 1
+
 	-- Calculate and grant score.
-	local score = length * 10
+	local score = length * (10 + (self.map.level.speedBonus * powerSpeedBonusMultiplier))
 	if boostCombo then
         if self.map.level.combo > 5 then
             score = score + 100 + ((self.map.level.combo - 6) * 10)
@@ -718,13 +747,9 @@ function SphereGroup:matchAndDeleteEffect(position, effect)
 		score = score + (1000 * (self.sphereChain.combo - 1))
     end
     local gapbonus
-	local largestGap = math.max(unpack(gaps))
-	if #gaps > 0 then
-		if largestGap < 20 --[[or not preOct2012GapScoring]] then
-			gapbonus = math.ceil(((1-(largestGap-0.5)/9.5)*1000)*math.min(1, #gaps) / 10) * 10 -- interpolate from 100,000 pts at 0,5 ball gap to 0 at 10 ball gap
-		else
-			gapbonus = math.ceil(((largestGap-22.5)*200)*math.min(1, #gaps) / 10) * 10 -- 0,000 pts per half a ball of a gap after 22,5 balls
-		end
+    if #gaps > 0 then
+		local largestGap = math.max(unpack(gaps))
+		gapbonus = _MathRoundDown((10500 * (1.5^-largestGap)+500), 10) * #gaps
 		score = score + gapbonus
     end
 
@@ -1083,7 +1108,7 @@ end
 
 
 function SphereGroup:getSphereOffset(sphereID)
-	return self.offset + self.spheres[sphereID].offset
+	return self.offset + ((_MathAreKeysInTable(self.spheres, sphereID) and self.spheres[sphereID].offset) or 0)
 end
 
 
@@ -1162,7 +1187,7 @@ end
 
 
 function SphereGroup:getBackPos()
-	return self:getSphereOffset(1) - 32 * self.spheres[1].size + 16
+	return self:getSphereOffset(1) - 29 * self.spheres[1].size + 16
 end
 
 
@@ -1340,6 +1365,7 @@ function SphereGroup:deserialize(t)
 	self.spheres = {}
 	local offset = 0
 	for i, sphere in ipairs(t.spheres) do
+		---@type Sphere
 		local s = Sphere(self, sphere)
 		s.offset = offset
 		-- links are mandatory!!!
@@ -1347,8 +1373,14 @@ function SphereGroup:deserialize(t)
 			s.prevSphere = self.spheres[i - 1]
 			self.spheres[i - 1].nextSphere = s
 		end
-		table.insert(self.spheres, s)
-		offset = offset + 32 * s.size
+        table.insert(self.spheres, s)
+		if sphere.powerup then
+            s:addPowerup(sphere.powerup, true)
+            -- idk why it's nil by default when it's always defined as 20
+			-- until a powerup is given
+			s.powerupTimeout = sphere.powerupTimeout or 0
+		end
+		offset = offset + 29 * s.size
 	end
 	self.matchCheck = t.matchCheck
 end

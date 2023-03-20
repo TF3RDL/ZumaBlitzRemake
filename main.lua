@@ -4,22 +4,24 @@
 require("crash")
 
 -- global utility methods
-require("src/strmethods")
-require("src/mathmethods")
+require("src.strmethods")
+require("src.mathmethods")
 
-local json = require("com/json")
+local json = require("com.json")
+-- TODO: Remove pcall wrapper once 12.0 is fully supported.
+local httpsw, https = pcall(function() return require("https") end)
 
-local Vec2 = require("src/Essentials/Vector2")
-local Color = require("src/Essentials/Color")
+local Vec2 = require("src.Essentials.Vector2")
+local Color = require("src.Essentials.Color")
 
-local Log = require("src/Kernel/Log")
-local Debug = require("src/Kernel/Debug")
+local Log = require("src.Kernel.Log")
+local Debug = require("src.Kernel.Debug")
 
-local BootScreen = require("src/Kernel/BootScreen")
-local Game = require("src/Game")
+local BootScreen = require("src.Kernel.BootScreen")
+local Game = require("src.Game")
 
-local ExpressionVariables = require("src/ExpressionVariables")
-local Settings = require("src/Kernel/Settings")
+local ExpressionVariables = require("src.ExpressionVariables")
+local Settings = require("src.Kernel.Settings")
 
 local http = require("socket.http")
 local ltn12 = require("ltn12")
@@ -39,9 +41,12 @@ end]]
 -- CONSTANT ZONE
 _VERSION = "vZB"
 _VERSION_NAME = "Zuma Blitz Remake Fork"
-_DISCORD_APPLICATION_ID = "1059347284623638609"
-_BUILD_NUMBER = "27 Jan 2023 Facebook group demo build"
+_DISCORD_APPLICATION_ID = "797956172539887657"
 _START_TIME = love.timer.getTime()
+
+-- Set this to a string of your choice. This will be only printed in log files and is not used anywhere else.
+-- You can automate this in i.e. a script by simply adding a `_BUILD_NUMBER = "<your number>"` line at the end of this main.lua file.
+_BUILD_NUMBER = "2023-02-15"
 
 
 -- TODO: at some point, get rid of this and make it configurable
@@ -243,6 +248,23 @@ end
 
 
 
+---Checks online and returns the newest engine version tag available (i.e. `v0.47.0`). Returns `nil` on failure (for example, when you go offline).
+---@return string?
+function _GetNewestVersion()
+	-- TODO: Failsafe for 11.x; remove after 12.0 is fully supported.
+	if not httpsw or not https then
+		return nil
+	end
+	local code, body = https.request("https://api.github.com/repos/jakubg1/OpenSMCE/tags", {headers = {["User-Agent"] = "OpenSMCE"}})
+	if code == 200 and body then
+		body = json.decode(body)
+		return body[1].name
+	end
+	return nil
+end
+
+
+
 
 
 function _LoadFile(path)
@@ -415,60 +437,49 @@ end
 
 
 
-function _ParseString(data, variables)
-	if not data then return nil end
-	if type(data) == "string" then return data end
-	local str = ""
-	for i, compound in ipairs(data) do
-		if type(compound) == "string" then
-			str = str .. compound
-		else
-			if compound.type == "scoreFormat" then
-				str = str .. _NumStr(_ParseNumber(compound.value, variables))
-			elseif compound.type == "variable" then
-				if not variables[compound.name] then
-					-- print("FATAL: Invalid variable: " .. compound.name)
-					-- print("Variables:")
-					-- for k, v in pairs(variables) do print(k, v) end
-					-- print("The game will crash now...")
-				end
-				str = str .. tostring(variables[compound.name])
-			end
-		end
+function _ParsePath(data)
+	if not data then
+		return nil
 	end
-	return str
+	return _FSPrefix .. "games/" .. _Game.name .. "/" .. data
 end
 
-function _ParsePath(data, variables)
-	if not data then return nil end
-	return _FSPrefix .. "games/" .. _Game.name .. "/" .. _ParseString(data, variables)
+function _ParsePathDots(data)
+	if not data then
+		return nil
+	end
+	return _FSPrefix .. "games." .. _Game.name .. "." .. data
 end
 
-function _ParseNumber(data, variables, properties)
-	if not data then return nil end
-	if type(data) == "number" then return data end
-	if type(data) == "string" then return tonumber(data) end
-	if data.type == "variable" then return variables[data.name] end
-	if data.type == "property" then return properties[data.name] end
+function _ParseNumber(data)
+	if not data then
+		return nil
+	end
+	if type(data) == "number" then
+		return data
+	end
+	if type(data) == "string" then
+		return tonumber(data)
+	end
 	if data.type == "randomSign" then
-		local value = _ParseNumber(data.value, variables, properties)
+		local value = _ParseNumber(data.value)
 		return math.random() < 0.5 and -value or value
 	end
 	if data.type == "randomInt" then
-		local min = _ParseNumber(data.min, variables, properties)
-		local max = _ParseNumber(data.max, variables, properties)
+		local min = _ParseNumber(data.min)
+		local max = _ParseNumber(data.max)
 		return math.random(min, max)
 	end
 	if data.type == "randomFloat" then
-		local min = _ParseNumber(data.min, variables, properties)
-		local max = _ParseNumber(data.max, variables, properties)
+		local min = _ParseNumber(data.min)
+		local max = _ParseNumber(data.max)
 		return min + math.random() * (max - min)
 	end
 	if data.type == "expr_graph" then
-		local value = _ParseNumber(data.value, variables, properties)
+		local value = _ParseNumber(data.value)
 		local points = {}
 		for i, point in ipairs(data.points) do
-			points[i] = _ParseVec2(point, variables, properties)
+			points[i] = _ParseVec2(point)
 		end
 		for i, point in ipairs(points) do
 			if value < point.x then
@@ -482,22 +493,23 @@ function _ParseNumber(data, variables, properties)
 		end
 		return points[#points].y
 	end
-	if data.type == "fromString" then
-		return tonumber(_ParseString(data.value, variables))
+end
+
+function _ParseVec2(data)
+	if not data then
+		return nil
 	end
+	return Vec2(_ParseNumber(data.x), _ParseNumber(data.y))
 end
 
-function _ParseVec2(data, variables, properties)
-	if not data then return nil end
-	if data.type == "variable" then return variables[data.name] end
-	return Vec2(_ParseNumber(data.x, variables, properties), _ParseNumber(data.y, variables, properties))
+function _ParseColor(data)
+	if not data then
+		return nil
+	end
+	return Color(_ParseNumber(data.r), _ParseNumber(data.g), _ParseNumber(data.b))
 end
 
-function _ParseColor(data, variables, properties)
-	if not data then return nil end
-	if data.type == "variable" then return variables[data.name] end
-	return Color(_ParseNumber(data.r, variables, properties), _ParseNumber(data.g, variables, properties), _ParseNumber(data.b, variables, properties))
-end
+
 
 function _NumStr(n)
 	local text = ""

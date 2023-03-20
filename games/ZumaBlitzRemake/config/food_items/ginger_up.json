@@ -1,7 +1,8 @@
 {
+    "$schema": "../../../../schemas/config/food_item.json",
     "displayName": "Ginger Up",
     "sprite": "",
     "effects": {
-        "dontDecreaseBlitzMeter": true
+        "hotFrogDecayPerTickBase": -1
     }
 }

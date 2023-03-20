@@ -1,11 +1,11 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class Scorpion
 ---@overload fun(path, deserializationTable):Scorpion
 local Scorpion = class:derive("Scorpion")
 
-local Vec2 = require("src/Essentials/Vector2")
-local Color = require("src/Essentials/Color")
+local Vec2 = require("src.Essentials.Vector2")
+local Color = require("src.Essentials.Color")
 
 
 
@@ -58,7 +58,6 @@ function Scorpion:update(dt)
 		local sphereGroup = self.path.sphereChains[1].sphereGroups[1]
 		if sphereGroup:getFrontPos() + 16 > self.offset and sphereGroup:getLastSphere().color ~= 0 then
 			sphereGroup:destroySphere(#sphereGroup.spheres)
-			_Game.session.level:destroySphere()
 			_Game:playSound(self.config.sphereDestroySound, 1, self:getPos())
 			self.destroyedSpheres = self.destroyedSpheres + 1
 			-- if this sphere is the last sphere, the scorpion gets rekt

@@ -1,7 +1,8 @@
 {
+    "$schema": "../../../../schemas/config/food_item.json",
     "displayName": "Sticky Apple",
     "sprite": "",
     "effects": {
-        "speedSubtractiveModifier": 0.15
+        "curveSpeedFactor": -0.15
     }
 }

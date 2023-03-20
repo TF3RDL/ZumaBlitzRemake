@@ -1,22 +1,22 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class UIWidget
 ---@overload fun(name, data, parent):UIWidget
 local UIWidget = class:derive("UIWidget")
 
-local UIWidgetRectangle = require("src/UI/WidgetRectangle")
-local UIWidgetSprite = require("src/UI/WidgetSprite")
-local UIWidgetSpriteButton = require("src/UI/WidgetSpriteButton")
-local UIWidgetSpriteButtonCheckbox = require("src/UI/WidgetSpriteButtonCheckbox")
-local UIWidgetSpriteButtonSlider = require("src/UI/WidgetSpriteButtonSlider")
-local UIWidgetSpriteProgress = require("src/UI/WidgetSpriteProgress")
-local UIWidgetSpriteProgressBlitz = require("src/UI/WidgetSpriteProgressBlitz")
-local UIWidgetText = require("src/UI/WidgetText")
-local UIWidgetTextInput = require("src/UI/WidgetTextInput")
-local UIWidgetParticle = require("src/UI/WidgetParticle")
-local UIWidgetLevel = require("src/UI/WidgetLevel")
+local UIWidgetRectangle = require("src.UI.WidgetRectangle")
+local UIWidgetSprite = require("src.UI.WidgetSprite")
+local UIWidgetSpriteButton = require("src.UI.WidgetSpriteButton")
+local UIWidgetSpriteButtonCheckbox = require("src.UI.WidgetSpriteButtonCheckbox")
+local UIWidgetSpriteButtonSlider = require("src.UI.WidgetSpriteButtonSlider")
+local UIWidgetSpriteProgress = require("src.UI.WidgetSpriteProgress")
+local UIWidgetSpriteProgressBlitz = require("src.UI.WidgetSpriteProgressBlitz")
+local UIWidgetText = require("src.UI.WidgetText")
+local UIWidgetTextInput = require("src.UI.WidgetTextInput")
+local UIWidgetParticle = require("src.UI.WidgetParticle")
+local UIWidgetLevel = require("src.UI.WidgetLevel")
 
-local Vec2 = require("src/Essentials/Vector2")
+local Vec2 = require("src.Essentials.Vector2")
 
 
 
@@ -264,6 +264,23 @@ function UIWidget:buttonSetEnabled(enabled)
 	end
 end
 
+function UIWidget:isButtonHovered()
+	if self.active and self.widget then
+		if self.widget.type == "spriteButton" and self.widget.hovered then
+			return true
+		elseif (self.widget.type == "spriteButtonCheckbox" or self.widget.type == "spriteButtonSlider") and self.widget.button.hovered then
+			return true
+		end
+	end
+
+	for childN, child in pairs(self.children) do
+		if child:isButtonHovered() then
+			return true
+		end
+	end
+	return false
+end
+
 
 
 -- APPROACH 1: ORIGINAL
@@ -324,7 +341,7 @@ function UIWidget:generateDrawData(layers, startN)
 			table.insert(layers[self:getLayer()], names)
 		end
 		if self.widget.type == "text" then
-			self.widget.textTmp = _ParseString(self.widget.text)
+			self.widget.textTmp = self.widget.text
 		end
 	end
 end

@@ -1,8 +1,9 @@
 {
+    "$schema": "../../../../schemas/config/food_item.json",
     "displayName": "Curvy Fries",
     "sprite": "",
     "effects": {
-        "curveClearsGiveOneSecond": true,
-        "curveClearPointModifier": 500
+        "curveClearTicksAdded": 1,
+        "curveClearPointsBase": 500
     }
 }

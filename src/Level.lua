@@ -1,17 +1,17 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class Level
 ---@overload fun(data):Level
 local Level = class:derive("Level")
 
-local Vec2 = require("src/Essentials/Vector2")
+local Vec2 = require("src.Essentials.Vector2")
 
-local Map = require("src/Map")
-local Shooter = require("src/Shooter")
-local ShotSphere = require("src/ShotSphere")
-local Target = require("src/Target")
-local Collectible = require("src/Collectible")
-local FloatingText = require("src/FloatingText")
+local Map = require("src.Map")
+local Shooter = require("src.Shooter")
+local ShotSphere = require("src.ShotSphere")
+local Target = require("src.Target")
+local Collectible = require("src.Collectible")
+local FloatingText = require("src.FloatingText")
 
 
 
@@ -47,8 +47,10 @@ function Level:new(data)
 
     self.powerupFrequency = data.powerupFrequency or 15
     self.individualPowerupFrequencies = data.individualPowerupFrequencies or nil
-	self.powerupList = {"time", "multiplier"} -- this should prob be replaced with a function when powers are implemented
-    self.lastPowerupDeltas = {}
+	self.powerupList = {"timeball", "multiplier"} -- this should prob be replaced with a function when powers are implemented
+    -- Apparently Multiplier balls appear faster as Spirit Turtle, but by how much?
+    -- src: http://bchantech.dreamcrafter.com/zumablitz/spiritanimals.php
+	self.lastPowerupDeltas = {}
 	for i, powerup in ipairs(self.powerupList) do
         self.lastPowerupDeltas[powerup] = self.stateCount - 600
     end
@@ -58,13 +60,12 @@ function Level:new(data)
 		end
 	end
 
+	---@type Sprite
+	self.targetSprite = _Game.configManager.targetSprites.random[math.random(1, #_Game.configManager.targetSprites.random)]
     self.targetFrequency = data.targetFrequency
     self.targetInitialDelaySecondsElapsed = false
 
-	self.targetHitBases = {3000, 4500, 6750, 10150, 15200, 22800}
-    self.targetHitScore = 0
-    -- TODO: Additions to targetHitScore once Spirit Animals and Food are implemented
-    -- (Kiwi Kebab, to be exact)
+	self.targetHitScores = self:getTargetHitScoreValues()
 
 	self.colorGeneratorNormal = data.colorGeneratorNormal
 	self.colorGeneratorDanger = data.colorGeneratorDanger
@@ -119,9 +120,10 @@ function Level:updateLogic(dt)
 	self.map:update(dt)
     self.shooter:update(dt)
     self.stateCount = self.stateCount + dt
-	self.targetHitScore = self.targetHitBases[math.min(self.targets+1, 6)] + (_MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "targetValueModifier") or 0)
+	self.targetHitScore = self.targetHitScores[math.min(self.targets+1, 6)] + (_MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "fruitPointsBase") or 0)
 
-	-- Danger sound
+    -- Danger sound
+	--[[
 	local d1 = self:getDanger() and not self.lost
 	local d2 = self.danger
 	if d1 and not d2 then
@@ -130,6 +132,7 @@ function Level:updateLogic(dt)
 		self.dangerSound:stop()
 		self.dangerSound = nil
 	end
+	]]
 
 	self.danger = self:getDanger() and not self.lost
 
@@ -186,32 +189,6 @@ function Level:updateLogic(dt)
 
 
 
-	-- Warning lights
-	local maxDistance = self:getMaxDangerProgress()
-	if maxDistance > 0 and not self.lost then
-		self.warningDelayMax = math.max((1 - maxDistance) * 3.5 + 0.5, 0.5)
-	else
-		self.warningDelayMax = nil
-	end
-
-	if self.warningDelayMax then
-		self.warningDelay = self.warningDelay + dt
-		if self.warningDelay >= self.warningDelayMax then
-			for i, path in ipairs(self.map.paths) do
-				if path:isInDanger() then
-					_Game:spawnParticle(path.dangerParticle, path:getPos(path.length))
-				end
-			end
-			--game:playSound(self.dangerSoundName, 1 + (4 - self.warningDelayMax) / 6)
-			_Game:playSound(self.dangerSoundName)
-			self.warningDelay = 0
-		end
-	else
-		self.warningDelay = 0
-	end
-
-
-
 	-- Time counting
 	if self.started and not self.controlDelay and not self:getFinish() and not self.finish and not self.lost then
 		self.time = self.time + dt
@@ -247,18 +224,21 @@ function Level:updateLogic(dt)
 
     -- Zuma style powerups
     if self.started and not self.finish and not self:areAllObjectivesReached() and not self:getEmpty() then
-        local powerups = { "time", "multiplier" }
+        local powerups = {}
+		for _,v in pairs(self.powerupList) do
+			table.insert(powerups, v)
+		end
 
 		local multiplierCap = 9
-		local raiseCap = _MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "multiplierCapAdditiveModifier")
-		if raiseCap then
-			multiplierCap = multiplierCap + raiseCap
+		local raiseCap = _MathAreKeysInTable(_Game:getCurrentProfile():getEquippedFoodItemEffects(), "multiplierMaximum")
+        if raiseCap then
+            multiplierCap = multiplierCap + raiseCap
         end
 		-- Don't spawn multipliers if we've hit the cap
-		if self.multiplier >= multiplierCap-1 then
+		if self.multiplier >= multiplierCap then
 			local pCount = 1
 			for _,v in pairs(powerups) do
-				if v == "multiplier" then
+                if v == "multiplier" then
 					table.remove(powerups, pCount)
                 end
 				pCount = pCount + 1
@@ -290,7 +270,8 @@ function Level:updateLogic(dt)
 		-- Traverse through all the spheres one more time and remove any multiplier powerups if
         -- we've reached the cap
 		-- TODO: Is there a better way to traverse every sphere? Might need to add a new function
-		if self.multiplier >= multiplierCap-1 then
+		if self.multiplier >= multiplierCap then
+			self.multiplier = multiplierCap
 			for _, path in pairs(self.map.paths) do
 				for _, sphereChain in pairs(path.sphereChains) do
 					for _, sphereGroup in pairs(sphereChain.sphereGroups) do
@@ -337,7 +318,7 @@ function Level:updateLogic(dt)
 			end
 			if #validPoints > 0 then
 				self.target = Target(
-					_Game.configManager.targetSprites.random[math.random(1, #_Game.configManager.targetSprites.random)],
+					self.targetSprite,
 					validPoints[math.random(1, #validPoints)],
 					false -- no slot machine yet!
                 )
@@ -453,8 +434,16 @@ function Level:updateLogic(dt)
 		if self.rollingSound then
 			self.rollingSound:stop()
 		end
+		-- FORK-SPECIFIC CODE: Add a highscore after the board
+		_Game:getCurrentProfile():writeHighscore()
 		_Game.uiManager:executeCallback("levelLost")
 		self.ended = true
+	end
+
+	-- Other variables, such as the speed timer
+	-- timer will not tick down when under hot frog.
+	if self.speedTimer > 0 and self.blitzMeter < 1 then
+		self.speedTimer = self.speedTimer - dt
 	end
 end
 
@@ -464,6 +453,8 @@ end
 function Level:updateMusic()
 	local music = _Game:getMusic(self.musicName)
 
+    local time = math.floor(math.max(self.objectives[1].target - self.objectives[1].progress, 0))
+	
 	if self.dangerMusicName then
 		local dangerMusic = _Game:getMusic(self.dangerMusicName)
 
@@ -474,7 +465,7 @@ function Level:updateMusic()
 			dangerMusic:setVolume(0)
 		else
 			-- Play the music accordingly to the danger flag.
-			if self.danger then
+			if time < 15 then
 				music:setVolume(0)
 				dangerMusic:setVolume(1)
 			else
@@ -872,6 +863,40 @@ end
 
 
 
+---FORK-SPECIFIC CODE:
+---Get the Target score values that changes depending on the Fruit and Spirit Animal.
+---@return number[]
+function Level:getTargetHitScoreValues()
+    local currentScore = 3000
+	local profile = _Game:getCurrentProfile()
+    if profile:getActiveMonument() == "spirit_eagle" then
+        currentScore = currentScore + 3000
+    end
+	if profile:getEquippedFoodItemEffects().fruitValueModifier then
+		currentScore = currentScore + profile:getEquippedFoodItemEffects().fruitValueModifier
+	end
+	local useFilter = false
+	local filterScore = 0
+	local tbl = {}
+
+	for _ = 1, 6 do
+		table.insert(tbl, (useFilter and filterScore) or currentScore)
+		useFilter = false
+		currentScore = _MathRoundUp((currentScore + (currentScore * 0.5)), 25)
+		local odd = tostring(currentScore):match("[27]5$")
+		if odd == "25" then
+			filterScore = currentScore + 25
+			useFilter = true
+		elseif odd == "75" then
+			filterScore = currentScore - 25
+			useFilter = true
+		end
+    end
+	return tbl
+end
+
+
+
 ---Increments the level's Blitz Meter by a given amount and launches the Hot Frog if reaches 1.
 ---@param amount any
 ---@param chain? boolean used for spirit turtle
@@ -1037,6 +1062,10 @@ function Level:reset()
 	self.targets = 0
     self.time = 0
 	self.stateCount = 0
+
+	-- add in current speedbonus
+	self.speedBonus = 0
+	self.speedTimer = 0
 
     self.target = nil
 	if _MathAreKeysInTable(self, "targetFrequency", "type") == "seconds" then
@@ -1206,6 +1235,7 @@ function Level:serialize()
 		powerupList = self.powerupList,
 		lastPowerupDeltas = self.lastPowerupDeltas,
         target = (self.target and self.target:serialize()),
+		targetSprite = self.targetSprite,
         targetSecondsCooldown = self.targetSecondsCooldown,
         targetInitialDelaySecondsElapsed = self.targetInitialDelaySecondsElapsed,
         targetHitScore = self.targetHitScore,
@@ -1226,7 +1256,9 @@ function Level:serialize()
 		lightningStormTime = self.lightningStormTime,
 		destroyedSpheres = self.destroyedSpheres,
 		paths = self.map:serialize(),
-		lost = self.lost
+		lost = self.lost,
+		speedBonus = self.speedBonus,
+		speedTimer = self.speedTimer
 	}
 	for i, shotSphere in ipairs(self.shotSpheres) do
 		table.insert(t.shotSpheres, shotSphere:serialize())
@@ -1259,10 +1291,12 @@ function Level:deserialize(t)
 	self.time = t.time
     self.stateCount = t.stateCount
 	self.powerupList = t.powerupList
-	self.lastPowerupDeltas = t.lastPowerupDeltas
-	self.target = t.target
+    self.lastPowerupDeltas = t.lastPowerupDeltas
+	self.targetSprite = t.targetSprite
+	if t.target then
+		self.target = Target(self.targetSprite, Vec2(t.target.pos.x, t.target.pos.y), false)
+	end
     self.targetSecondsCooldown = t.targetSecondsCooldown
-    self.targetFrequency = t.targetFrequency
 	self.targetHitScore = t.targetHitScore
 	self.targetInitialDelaySecondsElapsed = t.targetInitialDelaySecondsElapsed
 	self.blitzMeter = t.blitzMeter
@@ -1270,6 +1304,9 @@ function Level:deserialize(t)
 	self.shotLastHotFrogBall = t.shotLastHotFrogBall
 	self.multiplier = t.multiplier
 	self.lost = t.lost
+	-- ingame counters
+	self.speedBonus = t.speedBonus or 0
+	self.speedTimer = t.speedTimer or 0
 	-- Utils
 	self.controlDelay = t.controlDelay
 	self.finish = t.finish

@@ -1,4 +1,4 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class FoodItem
 ---@overload fun(data, path):FoodItem
@@ -17,6 +17,14 @@ function FoodItem:new(data, path)
     self.variants = data.variants
     self.variantBase = nil
     self.effects = data.effects
+end
+
+
+
+function FoodItem:syncVariantEffects()
+    if self.variantBase then
+        self.effects = _Game.configManager.foodItems[self.variantBase].effects
+    end
 end
 
 

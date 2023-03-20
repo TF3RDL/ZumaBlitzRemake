@@ -1,4 +1,4 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class UI2Sequence
 ---@overload fun(manager, config):UI2Sequence
@@ -50,6 +50,8 @@ function UI2Sequence:executeEntry(n)
         if entry.waitUntilFinished then
             self.waitTime = -1
         end
+    elseif entry.type == "setActive" then
+        self.manager:getNode(entry.node):setActive()
     elseif entry.type == "executeCallback" then
         self.manager:executeCallback(entry.name)
     elseif entry.type == "wait" then

@@ -1,9 +1,10 @@
 {
+    "$schema": "../../../../schemas/config/food_item.json",
     "displayName": "Neil's Strongarm",
     "sprite": "",
     "effects": {
-        "shotSpeedModifier": 0.22,
-        "fireballRadiusModifier": 0.40,
-        "fireballScoreModifier": 0.50
+        "shotSpeedBase": 175,
+        "hotFrogRadius": 22,
+        "hotFrogPointsBase": 500
     }
 }

@@ -7,18 +7,18 @@
 
 
 -- Class identification
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class Session
 ---@overload fun(path, deserializationTable):Session
 local Session = class:derive("Session")
 
 -- Include commons
-local Vec2 = require("src/Essentials/Vector2")
+local Vec2 = require("src.Essentials.Vector2")
 
 -- Include class constructors
-local Level = require("src/Level")
-local ColorManager = require("src/ColorManager")
+local Level = require("src.Level")
+local ColorManager = require("src.ColorManager")
 
 
 
@@ -178,7 +178,7 @@ end
 function Session:destroyAllSpheres(noRewards)
 	self:destroyFunction(
 		function(sphere, spherePos) return true end,
-		self.level.shooter.pos + Vec2(0, -32),
+		self.level.shooter.pos + Vec2(0, -29),
 		nil,
 		noRewards
 	)
@@ -202,7 +202,7 @@ end
 function Session:destroyColor(color)
 	self:destroyFunction(
 		function(sphere, spherePos) return sphere.color == color end,
-		self.level.shooter.pos + Vec2(0, -32)
+		self.level.shooter.pos + Vec2(0, -29)
 	)
 end
 
@@ -226,7 +226,7 @@ end
 function Session:destroyVertical(x, width)
 	self:destroyFunction(
 		function(sphere, spherePos) return math.abs(x - spherePos.x) <= width / 2 end,
-		self.level.shooter.pos + Vec2(0, -32)
+		self.level.shooter.pos + Vec2(0, -29)
 	)
 end
 
@@ -252,7 +252,7 @@ end
 function Session:destroyVerticalColor(x, width, color)
 	self:destroyFunction(
 		function(sphere, spherePos) return math.abs(x - spherePos.x) <= width / 2 and self:colorsMatch(color, sphere.color) end,
-		self.level.shooter.pos + Vec2(0, -32)
+		self.level.shooter.pos + Vec2(0, -29)
 	)
 end
 

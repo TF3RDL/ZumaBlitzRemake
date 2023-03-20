@@ -1,10 +1,10 @@
 {
-    "map": "kroakatoa_crab",
-    "music": "level",
-    "dangerMusic": "danger",
+    "map": "fossilfood_roots",
+    "music": "game3",
+    "dangerMusic": "danger2",
     "powerupFrequency": 15,
     "individualPowerupFrequencies": {
-        "time": 16,
+        "timeball": 16,
         "multiplier": 18
     },
     "targetFrequency": {
@@ -27,8 +27,8 @@
         "name": "default",
         "movement": {
             "type": "circular",
-            "x": 386,
-            "y": 236
+            "x": 380,
+            "y": 248
         }
     },
     "pathsBehavior": [
@@ -44,8 +44,8 @@
             "spawnRules": {
                 "type": "continuous"
             },
-            "spawnDistance": 0.6,
-            "dangerDistance": 0.75,
+            "spawnDistance": 0.7,
+            "dangerDistance": 0.65,
             "speeds": [
                 {
                     "distance": 0,
@@ -57,7 +57,7 @@
                     }
                 },
                 {
-                    "distance": 0.2,
+                    "distance": 0.4,
                     "speed": 75.0,
                     "transition": {
                         "type": "bezier",
@@ -66,7 +66,7 @@
                     }
                 },
                 {
-                    "distance": 0.6,
+                    "distance": 0.55,
                     "speed": 75.0,
                     "transition": {
                         "type": "bezier",

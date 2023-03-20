@@ -1,10 +1,10 @@
-local class = require "com/class"
+local class = require "com.class"
 
 ---@class UIWidgetSpriteProgress
 ---@overload fun(parent, sprite, value, smooth):UIWidgetSpriteProgress
 local UIWidgetSpriteProgress = class:derive("UIWidgetSpriteProgress")
 
-local Vec2 = require("src/Essentials/Vector2")
+local Vec2 = require("src.Essentials.Vector2")
 
 
 
@@ -23,7 +23,7 @@ end
 
 
 function UIWidgetSpriteProgress:update(dt)
-	local value = _ParseNumber(self.valueData)
+	local value = self.valueData
 	if self.smooth then
 		if self.value < value then
 			self.value = math.min(self.value * 0.95 + value * 0.0501, value)
