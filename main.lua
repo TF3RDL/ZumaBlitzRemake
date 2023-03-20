@@ -23,20 +23,8 @@ local Game = require("src.Game")
 local ExpressionVariables = require("src.ExpressionVariables")
 local Settings = require("src.Kernel.Settings")
 
-local http = require("socket.http")
-local ltn12 = require("ltn12")
+local Network = require("src.Network")
 local DiscordRichPresence = require("src/DiscordRichPresence")
-
---[[
-local body = {}
-local r, c, h, s = http.request {
-	-- make sure you have the nodejs server up, or this won't work
-    url = "http://localhost:21723/",
-	sink = ltn12.sink.table(body)
-}
-for _, v in pairs(body) do
-	print(v)
-end]]
 
 -- CONSTANT ZONE
 _VERSION = "vZB"
@@ -87,6 +75,9 @@ _EngineSettings = nil
 ---@type DiscordRichPresence
 _DiscordRPC = nil
 
+---@type Network
+_Network = nil
+
 
 
 
@@ -107,6 +98,7 @@ function love.load()
 	_Log = Log()
 	_Debug = Debug()
 	_EngineSettings = Settings("engine/settings.json")
+	_Network = Network()
 	_DiscordRPC = DiscordRichPresence()
 	
     -- If autoload.txt exists, load the game name from there

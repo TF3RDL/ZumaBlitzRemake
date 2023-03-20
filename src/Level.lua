@@ -12,11 +12,7 @@ local ShotSphere = require("src.ShotSphere")
 local Target = require("src.Target")
 local Collectible = require("src.Collectible")
 local FloatingText = require("src.FloatingText")
-local json = require("com.json")
 
--- send stuff
-local http = require("socket.http")
-local ltn12 = require"ltn12"
 
 
 ---Constructs a new Level.
@@ -1424,10 +1420,8 @@ function Level:saveStats()
 	end
 	-- TODO: Set XP to zero if the game was aborted, and x2 if a potion was used.
 
-	local post_body = json.encode(s)
-	--print(post_body)
-
-	-- add http post request here
+    -- add http post request here
+	--_Network:postSerialized("url here", s)
 
 end
 
