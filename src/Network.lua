@@ -58,8 +58,9 @@ end
 ---Sends a `POST` request with a serialized JSON as it's request body to a specified URL.
 ---
 ---Return table fields:
---- `code`: The HTTPS code (or 0 if it fails).
---- `body`: The response body (or `nil` if it fails).
+---- `code`: The HTTPS code (or 0 if it fails).
+---- `body`: The response body (or `nil` if it fails).
+---- `resHeaders`: Response headers (or `nil` if it fails).
 ---@param url string The URL to send the `POST` request to.
 ---@param tbl table The table to serialize to JSON.
 ---@param expectResJSON? boolean Expects a JSON response and serializes it.
