@@ -5,7 +5,7 @@ local class = require "com.class"
 local Network = class:derive("Network")
 
 local json = require("com.json")
-local http = require("socket.http")
+local https = require("https")
 local ltn12 = require("ltn12")
 
 
@@ -13,15 +13,16 @@ local ltn12 = require("ltn12")
 --[[
     DEV NOTES:
 
-    Keep in mind that HTTPS requests may be harder to create unless you are working
-    with LOVE 12.0. Feel free to add workarounds when dealing with 11.3 (the current
-    version). And please don't use 11.4, that thing is unstable.
+    Keep in mind that HTTPS requests are only possible within LOVE 12.0. Building the
+    DLLs for <11.4 may be possible but stack overflow errors have occured during testing
+    (indicated by the unhelpful "Failed to initialize filesystem" error).
+    See more: https://love2d.org/wiki/lua-https
 
     There are no fields for now, feel free to add/change stuff here as more networking
     functionalities are added.
 
-    PS: Methods of this class may require use of `coroutine`.
-    As far as I can remember this blocks the main process (the game).
+    PS: Methods of this class may require use of `love.thread`.
+    HTTP/HTTPS methods block the main process (the game).
 ]]
 
 
@@ -31,57 +32,51 @@ local ltn12 = require("ltn12")
 --- This class is used for potential online functionality such as score submission,
 --- version updates and advanced Discord integration.
 function Network:new()
+    self.userAgent = "ZumaBlitzRemake v0.1.1"
 end
 
 
 
 ---Sends a `GET` request to a specified URL.
----The returned table may only have "code" as it's field if the connection refused.
----@param url string
----@return { res: number, code: number|"connection refused", head: table, status: string, body: any }
-function Network:get(url)
-    local body = {}
-    local res, code, head, status = http.request({
-        url = url,
-        sink = ltn12.sink.table(body)
+---
+---Return table fields:
+---- `code`: The HTTPS code (or 0 if it fails).
+---- `body`: The response body (or `nil` if it fails).
+---@param url string The URL to send the `GET` request to.
+---@param expectResJSON? boolean Expects a JSON response and serializes it.
+---@return { code: number|0, body: string|nil }
+function Network:get(url, expectResJSON)
+    local code, body = https.request(url, {
+        headers = {["User-Agent"] = self.userAgent}
     })
-    return {
-        res = res,
-        code = code,
-        head = head,
-        status = status,
-        body = body[1] or nil
-    }
+    body = expectResJSON and json.encode(body) or body
+    return {code = code, body = body}
 end
 
 
 
 ---Sends a `POST` request with a serialized JSON as it's request body to a specified URL.
----The returned table may only have "code" as it's field if the connection refused.
----@param url string
----@param tbl table
----@return { res: number, code: number|"connection refused", head: table, status: number, body: any }
-function Network:postSerialized(url, tbl)
-    local requestBody = json.encode(tbl)
-    local responseBody = {}
-    local res, code, head, status = http.request({
-        method = "POST",
-        url = url,
+---
+---Return table fields:
+--- `code`: The HTTPS code (or 0 if it fails).
+--- `body`: The response body (or `nil` if it fails).
+---@param url string The URL to send the `POST` request to.
+---@param tbl table The table to serialize to JSON.
+---@param expectResJSON? boolean Expects a JSON response and serializes it.
+---@return { code: number|0, body: string|nil, resHeaders: table|nil }
+function Network:postSerialized(url, tbl, expectResJSON)
+    local code, body, headers = https.request(url, {
+        method = "post",
         headers = {
-            ["content-type"] = "application/json",
-            ["content-length"] = tostring(#requestBody)
+            ["User-Agent"] = self.userAgent
         },
-        source = ltn12.source.string(requestBody),
-        sink = ltn12.sink.table(responseBody)
+        data = json.encode(tbl),
     })
-    ---@diagnostic disable: cast-local-type
-    responseBody = table.concat(responseBody)
+    body = expectResJSON and json.encode(body) or body
     return {
-        res = res,
         code = code,
-        head = head,
-        status = status,
-        body = responseBody or nil
+        body = body,
+        resHeaders = headers
     }
 end
 

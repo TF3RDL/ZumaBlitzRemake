@@ -99,7 +99,10 @@ function love.load()
 	_Debug = Debug()
 	_EngineSettings = Settings("engine/settings.json")
 	_Network = Network()
-	_DiscordRPC = DiscordRichPresence()
+    _DiscordRPC = DiscordRichPresence()
+
+    local a = _Network:get("https://love2d.org/wiki/lua-https")
+	print(a.code)
 	
     -- If autoload.txt exists, load the game name from there
     local autoload = _LoadFile("autoload.txt") or nil
