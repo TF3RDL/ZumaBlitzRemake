@@ -9,6 +9,12 @@ from 2010-2017, specifically the *Kroakatoa Island* update
 
 --------
 
+> ⚠️ **Branch-Specific Warning**
+> This branch (`online-functionality`) requires usage of **LOVE2D 12.0**.
+> LOVE 12.0 builds can be found here: <https://github.com/love2d/love/actions>
+
+--------
+
 **Zuma Blitz** was a Facebook game that used Adobe Flash, from 2010-2017. It
 released on December 14, 2010. It then had a revamp in 2012, called
 *Kroakatoa Island*, and was closed March 31, 2017.
