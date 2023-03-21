@@ -81,7 +81,8 @@ function Network:postSerialized(url, tbl, expectResJSON)
     local code, body, headers = https.request(url, {
         method = "post",
         headers = {
-            ["User-Agent"] = self.USER_AGENT
+            ["User-Agent"] = self.USER_AGENT,
+            ["Content-Type"] = "application/json"
         },
         data = json.encode(tbl),
     })
