@@ -23,8 +23,11 @@ local Game = require("src.Game")
 local ExpressionVariables = require("src.ExpressionVariables")
 local Settings = require("src.Kernel.Settings")
 
-local Network = require("src.Network")
-local DiscordRichPresence = require("src/DiscordRichPresence")
+local DiscordRichPresence = require("src.DiscordRichPresence")
+local Network = require("src.Kernel.Network")
+local ThreadManager = require("src.ThreadManager")
+
+
 
 -- CONSTANT ZONE
 _VERSION = "vZB"
@@ -63,6 +66,8 @@ _Debug = nil
 
 ---@type ExpressionVariables
 _Vars = ExpressionVariables()
+_Network = Network()
+_ThreadManager = ThreadManager()
 
 
 
@@ -74,9 +79,6 @@ _EngineSettings = nil
 
 ---@type DiscordRichPresence
 _DiscordRPC = nil
-
----@type Network
-_Network = nil
 
 
 
@@ -97,12 +99,8 @@ function love.load()
 	-- Initialize some classes
 	_Log = Log()
 	_Debug = Debug()
-	_EngineSettings = Settings("engine/settings.json")
-	_Network = Network()
-    _DiscordRPC = DiscordRichPresence()
-
-    local a = _Network:get("https://love2d.org/wiki/lua-https")
-	print(a.code)
+    _EngineSettings = Settings("engine/settings.json")
+	_DiscordRPC = DiscordRichPresence()
 	
     -- If autoload.txt exists, load the game name from there
     local autoload = _LoadFile("autoload.txt") or nil
@@ -122,6 +120,7 @@ function love.update(dt)
 	_Log:update(dt)
 	_Debug:update(dt)
 	_DiscordRPC:update(dt)
+	_ThreadManager:update(dt)
 
 	-- rainbow effect for the shooter and console cursor blink; to be phased out soon
 	_TotalTime = _TotalTime + dt
@@ -256,6 +255,22 @@ function _GetNewestVersion()
 		return body[1].name
 	end
 	return nil
+end
+
+
+
+---Checks online and executes a function with the newest engine version tag available (i.e. `v0.47.0`) as an argument or `nil` on failure (for example, when you go offline).
+---Threaded version: non-blocking call.
+---@param onFinish function A function which will be called once the checking process is finished. A version argument is passed.
+function _GetNewestVersionThreaded(onFinish)
+	_Network:getThreaded("https://api.github.com/repos/jakubg1/OpenSMCE/tags", false, function(result)
+		if result.code == 200 and result.body then
+			result.body = json.decode(result.body)
+			onFinish(result.body[1].name)
+		else
+			onFinish(nil)
+		end
+	end)
 end
 
 
