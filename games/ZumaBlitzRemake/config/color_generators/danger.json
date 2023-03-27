@@ -3,6 +3,7 @@
     "select_chance": 0.25,
     "paths_in_danger_only": true,
     "colors": [
+        -7,
         1,
         2,
         3,
@@ -13,6 +14,7 @@
     ],
     "fallback": 0,
     "colors_remove_if_nonexistent": [
+        -7,
         1,
         2,
         3,
