@@ -14,7 +14,6 @@
     ],
     "fallback": 0,
     "colors_remove_if_nonexistent": [
-        -7,
         1,
         2,
         3,
