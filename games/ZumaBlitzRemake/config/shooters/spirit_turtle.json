@@ -42,6 +42,9 @@
         "y": 34
     },
     "nextBallSprites": {
+        "-7": {
+            "sprite": "sprites/game/shooters/next_ball_0.json"
+        },
         "-3": {
             "sprite": "sprites/game/shooters/next_ball_0.json"
         },
