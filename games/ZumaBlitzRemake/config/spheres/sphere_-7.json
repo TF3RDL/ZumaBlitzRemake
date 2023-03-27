@@ -1,0 +1,29 @@
+{
+    "$schema": "../../../../schemas/config/Sphere.json",
+	"spriteRollingSpeed": 1.15,
+    "sprite": "sprites/game/ball_4_cb.json",
+    "destroyParticle": "particles/collapse_wild.json",
+    "powerupSprites": {
+        "timeball": "sprites/game/time_ball_4_cb.json",
+        "multiplier": "sprites/game/multiplier_ball_4_cb.json"
+    },
+    "color": {
+        "r": 0.5,
+        "g": 0.5,
+        "b": 0.5
+    },
+    "interchangeable": true,
+    "shootBehavior": {
+        "type": "normal"
+    },
+    "shootSound": "sound_events/sphere_shoot_normal.json",
+    "hitBehavior": {
+        "type": "normal"
+    },
+    "hitSound": "sound_events/sphere_hit_normal.json",
+    "matches": [
+        -1,
+        -7
+    ],
+    "matchFont": "fonts/score0.json"
+}
