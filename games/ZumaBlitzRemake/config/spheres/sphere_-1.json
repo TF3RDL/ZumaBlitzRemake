@@ -16,6 +16,7 @@
     },
     "hitSound": "sound_events/sphere_hit_normal.json",
     "matches": [
+        -7,
         -1,
         1,
         2,
