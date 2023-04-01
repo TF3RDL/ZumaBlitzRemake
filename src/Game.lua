@@ -391,7 +391,7 @@ function Game:setFullscreen(fullscreen)
 	else
 		_DisplaySize = self:getNativeResolution()
 	end
-	love.window.setMode(_DisplaySize.x, _DisplaySize.y, {fullscreen = fullscreen, resizable = false})
+	love.window.setMode(_DisplaySize.x, _DisplaySize.y, {fullscreen = fullscreen, resizable = true})
 end
 
 
